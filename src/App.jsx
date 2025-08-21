@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import Layout from "./user design/Layout";
-import Navbar from "./user design/Navbar"; // ✅ Navbar at top
+import Navbar from "./user design/navbar"; // ✅ Navbar at top
 
 // ✅ Main Pages
 import Home from "./user design/Home";
