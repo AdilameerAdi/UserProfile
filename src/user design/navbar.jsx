@@ -36,7 +36,7 @@ function Navbar() {
             className="font-semibold text-sm sm:text-base"
             style={{ color: theme.navbarCoinText || "#60A5FA" }}
           >
-            1200
+            00
           </span>
           <button
             onClick={() => navigate("/store/purchase-oc")}

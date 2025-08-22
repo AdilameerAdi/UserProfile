@@ -1,41 +1,106 @@
 import { useState } from "react";
-export default function AuthCard({ onSubmit }) {
+import logo from "../img/logo.png"; // Your logo image
+
+export default function AuthCard({ onSubmit, email, password, setEmail, setPassword, error }) {
   const [isLogin, setIsLogin] = useState(true);
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-900">
-      <div className="bg-gray-800 w-full max-w-4xl rounded-xl shadow-lg overflow-hidden flex transition-all duration-500">
-        {/* Left side text */}
-        <div className={`w-1/2 p-8 flex flex-col justify-center items-start transition-all duration-500 ${isLogin ? "order-1" : "order-2"}`}>
-          <h2 className="text-3xl font-bold text-white mb-4">
-            {isLogin ? "Welcome Back to the Game of Dionisy!" : "Welcome to the Most Apprecious Game!"}
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black px-4">
+      <div className="bg-gray-900 w-full max-w-5xl rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row transition-all duration-500 border border-gray-700">
+        
+        {/* Left Section (Logo + Intro) */}
+        <div
+          className={`w-full md:w-1/2 flex flex-col justify-center items-center text-center p-10 transition-all duration-500 ${
+            isLogin ? "order-1" : "order-2"
+          }`}
+        >
+          {/* Game Logo */}
+          <div className="w-32 h-32 mb-6 flex items-center justify-center bg-gray-800 rounded-full shadow-lg overflow-hidden">
+            <img
+              src={logo}
+              alt="Game Logo"
+              className="w-full h-full object-cover"
+            />
+          </div>
+
+          <h2 className="text-4xl font-extrabold text-white mb-4 leading-tight">
+            {isLogin ? "Welcome Back to Dionisy!" : "Join the Game of Dionisy!"}
           </h2>
-          <p className="text-gray-300 mb-6">
-            {isLogin ? "Enter your credentials to continue your adventure." : "Sign up to join the ultimate gaming experience."}
+          <p className="text-gray-400 mb-6 text-lg max-w-md">
+            {isLogin
+              ? "Sign in and continue your epic journey in the world of Dionisy."
+              : "Create your account and become a legend in the ultimate gaming experience."}
           </p>
           <button
             onClick={() => setIsLogin(!isLogin)}
-            className="text-blue-400 hover:underline font-semibold"
+            className="text-blue-400 hover:underline font-semibold text-lg"
           >
-            {isLogin ? "New here? Sign Up" : "Already have an account? Sign In"}
+            {isLogin
+              ? "New player? Create an Account"
+              : "Already have an account? Sign In"}
           </button>
         </div>
 
-        {/* Right side form */}
-        <div className={`w-1/2 p-8 flex flex-col justify-center transition-all duration-500 ${isLogin ? "order-2" : "order-1"}`}>
+        {/* Right Section (Form) */}
+        <div
+          className={`w-full md:w-1/2 bg-gray-800 p-10 flex flex-col justify-center transition-all duration-500 ${
+            isLogin ? "order-2" : "order-1"
+          }`}
+        >
           {isLogin ? (
-            <form className="flex flex-col gap-4" onSubmit={onSubmit}>
-              <input type="email" placeholder="Email" className="p-3 rounded bg-gray-700 text-white focus:outline-none" />
-              <input type="password" placeholder="Password" className="p-3 rounded bg-gray-700 text-white focus:outline-none" />
-              <button type="submit" className="bg-blue-500 text-white p-3 rounded hover:bg-blue-600 transition">Sign In</button>
+            <form className="flex flex-col gap-5" onSubmit={onSubmit}>
+              <input
+                type="email"
+                placeholder="Email Address"
+                className="p-4 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+              <input
+                type="password"
+                placeholder="Password"
+                className="p-4 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+              {error && <p className="text-red-500 text-sm">{error}</p>}
+              <button
+                type="submit"
+                className="bg-blue-600 text-white py-4 rounded-lg font-semibold text-lg hover:bg-blue-700 transition duration-300 shadow-md"
+              >
+                Sign In
+              </button>
             </form>
           ) : (
-            <form className="flex flex-col gap-4" onSubmit={onSubmit}>
-              <input type="text" placeholder="Full Name" className="p-3 rounded bg-gray-700 text-white focus:outline-none" />
-              <input type="email" placeholder="Email" className="p-3 rounded bg-gray-700 text-white focus:outline-none" />
-              <input type="password" placeholder="Password" className="p-3 rounded bg-gray-700 text-white focus:outline-none" />
-              <input type="password" placeholder="Confirm Password" className="p-3 rounded bg-gray-700 text-white focus:outline-none" />
-              <button type="submit" className="bg-green-500 text-white p-3 rounded hover:bg-green-600 transition">Sign Up</button>
+            <form className="flex flex-col gap-5" onSubmit={onSubmit}>
+              <input
+                type="text"
+                placeholder="Full Name"
+                className="p-4 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-gray-400"
+              />
+              <input
+                type="email"
+                placeholder="Email Address"
+                className="p-4 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-gray-400"
+              />
+              <input
+                type="password"
+                placeholder="Password"
+                className="p-4 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-gray-400"
+              />
+              <input
+                type="password"
+                placeholder="Confirm Password"
+                className="p-4 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-gray-400"
+              />
+              <button
+                type="submit"
+                className="bg-green-600 text-white py-4 rounded-lg font-semibold text-lg hover:bg-green-700 transition duration-300 shadow-md"
+              >
+                Sign Up
+              </button>
             </form>
           )}
         </div>

@@ -40,11 +40,12 @@ export default function Sidebar() {
         style={{ backgroundColor: theme.bgColor, borderColor: theme.borderColor }}
       >
         <div
-          className="text-transparent uppercase text-xl font-extrabold tracking-wide drop-shadow-md"
-          style={{ background: theme.gradientText, fontFamily: theme.fontFamily }}
-        >
-          Dionisy
-        </div>
+  className="bg-clip-text text-transparent uppercase text-xl font-extrabold tracking-wide drop-shadow-md"
+  style={{ background: theme.gradientText, fontFamily: theme.fontFamily }}
+>
+  Dionisy
+</div>
+
 
         <div className="flex items-center gap-2 flex-shrink-0">
           {mainLinks.map((link) => (
