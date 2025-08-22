@@ -1,3 +1,4 @@
+import { useState } from "react";
 export default function AuthCard({ onSubmit }) {
   const [isLogin, setIsLogin] = useState(true);
 
