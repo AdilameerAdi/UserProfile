@@ -3,7 +3,7 @@ import Layout from "./user design/Layout";
 import Navbar from "./user design/navbar"; // ✅ Navbar at top
 
 // ✅ Main Pages
-import Home from "./user design/Home";
+import Home from "./user design/home";
 import Download from "./user design/Download";
 import Support from "./user design/Support";
 import Store from "./user design/Store";

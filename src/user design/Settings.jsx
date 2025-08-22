@@ -2,7 +2,7 @@ import { useState, useContext } from "react";
 import { ThemeContext } from "../context/ThemeContext";
 
 export default function Settings() {
-  const { theme } = useContext(ThemeContext);
+  const { theme, switchTheme, currentThemeName } = useContext(ThemeContext);
 
   const [activeTab, setActiveTab] = useState("account");
   const [showEmailForm, setShowEmailForm] = useState(false);
@@ -212,7 +212,7 @@ export default function Settings() {
             backgroundColor: theme.primary,
             color: theme.buttonText,
             border:
-              theme === t ? `3px solid ${theme.activeTabBg}` : `1px solid ${theme.borderColor}`,
+              currentThemeName === t ? `3px solid ${theme.activeTabBg}` : `1px solid ${theme.borderColor}`,
           }}
         >
           {t.charAt(0).toUpperCase() + t.slice(1)}
