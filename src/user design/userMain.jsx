@@ -183,62 +183,73 @@ export default function Sidebar() {
 
       {/* Desktop Sidebar */}
       <div
-        className="hidden md:flex md:flex-col md:w-64 h-screen sticky top-0 border-r shadow-sm"
+        className="hidden md:flex md:flex-col md:w-16 h-screen sticky top-0 border-r shadow-sm"
         style={{ backgroundColor: theme.bgColor, borderColor: theme.borderColor, color: theme.textColor }}
       >
-        <div
-          className="px-4 py-5 text-transparent uppercase text-2xl font-extrabold tracking-wide drop-shadow-md"
-          style={{ background: theme.gradientText, fontFamily: theme.fontFamily }}
-        >
-          Dionisy
+        <div className="h-14 flex items-center justify-center">
+          <div
+            className="text-transparent text-xl font-extrabold tracking-wide drop-shadow-md"
+            style={{ background: theme.gradientText, fontFamily: theme.fontFamily }}
+          >
+            D
+          </div>
         </div>
 
-        <nav className="flex-1 overflow-y-auto px-2 pb-4 flex flex-col gap-1">
+        <nav className="flex-1 overflow-y-auto py-2 flex flex-col items-center gap-2">
           {mainLinks.map((link) => (
             <NavLink
               key={link.name}
               to={link.path}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2 rounded-lg border-l-4 transition-all duration-300 ${
+                `group relative flex items-center justify-center w-12 h-12 rounded-xl transition-all duration-300 ${
                   isActive ? "shadow-sm" : "hover:opacity-90"
                 }`
               }
               style={({ isActive }) => ({
-                color: isActive ? theme.activeText : theme.textColor,
                 backgroundColor: isActive ? theme.activeBg : "transparent",
-                borderColor: isActive ? theme.activeBorder : "transparent",
+                color: isActive ? theme.activeText : theme.textColor,
+                borderLeft: isActive ? `4px solid ${theme.activeBorder}` : undefined,
               })}
             >
               <span className="text-lg">{link.icon}</span>
-              <span className="text-sm font-medium">{link.name}</span>
+              <span
+                className="pointer-events-none absolute left-14 top-1/2 -translate-y-1/2 whitespace-nowrap text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow"
+                style={{ backgroundColor: theme.tooltipBg, color: theme.tooltipText }}
+              >
+                {link.name}
+              </span>
             </NavLink>
           ))}
 
           {/* Profile Section */}
-          <div className="mt-2">
+          <div
+            className="relative group"
+            onMouseEnter={() => { setIsProfileOpen(true); setIsStoreOpen(false); }}
+            onMouseLeave={() => setIsProfileOpen(false)}
+          >
             <button
-              onClick={() => {
-                setIsProfileOpen(!isProfileOpen);
-                setIsStoreOpen(false);
-              }}
-              className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:opacity-90 transition duration-300"
+              onClick={() => { setIsProfileOpen(!isProfileOpen); setIsStoreOpen(false); }}
+              className="relative flex items-center justify-center w-12 h-12 rounded-xl hover:opacity-90 transition duration-300"
               style={{ color: theme.textColor }}
             >
-              <span className="text-sm font-medium flex items-center gap-3">
-                <FaUser />
+              <FaUser />
+              <span
+                className="pointer-events-none absolute left-14 top-1/2 -translate-y-1/2 whitespace-nowrap text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow"
+                style={{ backgroundColor: theme.tooltipBg, color: theme.tooltipText }}
+              >
                 Profile
               </span>
-              <span className="text-xs">{isProfileOpen ? "−" : "+"}</span>
             </button>
-            {isProfileOpen && (
-              <div className="mt-1 ml-2 flex flex-col gap-1">
+            {(isProfileOpen) && (
+             <div
+  className="absolute left-16 top-full mt-2 rounded-lg shadow-lg w-48 border flex flex-col gap-1 p-2 z-[1000]"
+  style={{ backgroundColor: theme.dropdownBg, borderColor: theme.borderColor }}
+>
                 {profileLinks.map((sub) => (
                   <NavLink
                     key={sub.name}
                     to={sub.path}
-                    className={({ isActive }) =>
-                      `block px-3 py-2 rounded-md border-l-4 text-sm transition-all duration-300`
-                    }
+                    className={({ isActive }) => `block px-4 py-2 text-sm rounded-md border-l-4 transition-all duration-300`}
                     style={({ isActive }) => ({
                       color: isActive ? theme.activeText : theme.textColor,
                       backgroundColor: isActive ? theme.activeBg : "transparent",
@@ -254,30 +265,34 @@ export default function Sidebar() {
           </div>
 
           {/* Store Section */}
-          <div className="mt-1">
+          <div
+            className="relative group"
+            onMouseEnter={() => { setIsStoreOpen(true); setIsProfileOpen(false); }}
+            onMouseLeave={() => setIsStoreOpen(false)}
+          >
             <button
-              onClick={() => {
-                setIsStoreOpen(!isStoreOpen);
-                setIsProfileOpen(false);
-              }}
-              className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:opacity-90 transition duration-300"
+              onClick={() => { setIsStoreOpen(!isStoreOpen); setIsProfileOpen(false); }}
+              className="relative flex items-center justify-center w-12 h-12 rounded-xl hover:opacity-90 transition duration-300"
               style={{ color: theme.textColor }}
             >
-              <span className="text-sm font-medium flex items-center gap-3">
-                <FaStore />
+              <FaStore />
+              <span
+                className="pointer-events-none absolute left-14 top-1/2 -translate-y-1/2 whitespace-nowrap text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow"
+                style={{ backgroundColor: theme.tooltipBg, color: theme.tooltipText }}
+              >
                 Store
               </span>
-              <span className="text-xs">{isStoreOpen ? "−" : "+"}</span>
             </button>
-            {isStoreOpen && (
-              <div className="mt-1 ml-2 flex flex-col gap-1">
+            {(isStoreOpen) && (
+             <div
+  className="absolute left-16 top-full mt-2 rounded-lg shadow-lg w-48 border flex flex-col gap-1 p-2 z-[1000]"
+  style={{ backgroundColor: theme.dropdownBg, borderColor: theme.borderColor }}
+>
                 {storeLinks.map((sub) => (
                   <NavLink
                     key={sub.name}
                     to={sub.path}
-                    className={({ isActive }) =>
-                      `block px-3 py-2 rounded-md border-l-4 text-sm transition-all duration-300`
-                    }
+                    className={({ isActive }) => `block px-4 py-2 text-sm rounded-md border-l-4 transition-all duration-300`}
                     style={({ isActive }) => ({
                       color: isActive ? theme.activeText : theme.textColor,
                       backgroundColor: isActive ? theme.activeBg : "transparent",
@@ -295,17 +310,23 @@ export default function Sidebar() {
 
         {/* Footer / Extra Links */}
         <div className="px-2 py-3 border-t" style={{ borderColor: theme.borderColor }}>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-center gap-2">
             {extraLinks.map((link) => (
               <a
                 key={link.name}
                 href={link.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center w-9 h-9 rounded-lg hover:opacity-90 transition duration-300"
+                className="group relative flex items-center justify-center w-10 h-10 rounded-lg hover:opacity-90 transition duration-300"
                 style={{ color: theme.textColor }}
               >
                 <span className="text-lg">{link.icon}</span>
+                <span
+                  className="pointer-events-none absolute left-14 top-1/2 -translate-y-1/2 whitespace-nowrap text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow"
+                  style={{ backgroundColor: theme.tooltipBg, color: theme.tooltipText }}
+                >
+                  {link.name}
+                </span>
               </a>
             ))}
           </div>
