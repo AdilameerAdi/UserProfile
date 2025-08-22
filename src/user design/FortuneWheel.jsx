@@ -1,7 +1,10 @@
-import { useState } from "react";
+import { useState, useContext } from "react";
 import { FaCoins } from "react-icons/fa";
+import { ThemeContext } from "../context/ThemeContext";
 
 export default function FortuneWheel() {
+  const { theme } = useContext(ThemeContext);
+
   const [spinsLeft, setSpinsLeft] = useState(3);
   const [spinning, setSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
@@ -33,43 +36,53 @@ export default function FortuneWheel() {
     const degreesPerPrize = 360 / prizes.length;
 
     const extraRotation = 6 * 360; // extra spins before stop
-    const finalRotation =
-  rotation + extraRotation + randomIndex * degreesPerPrize;
- setRotation(finalRotation);
-   setTimeout(() => {
-  setSpinning(false);
+    const finalRotation = rotation + extraRotation + randomIndex * degreesPerPrize;
+    setRotation(finalRotation);
 
-  // Compute winning slice based on final wheel angle & pointer at 12 o'clock
-  const pointerAngle = 270; // top-center
-  const norm = ((finalRotation % 360) + 360) % 360; // 0..359
-  const rel = ((pointerAngle - norm) % 360 + 360) % 360; // angle under pointer
-  const winningIndex = Math.floor(rel / degreesPerPrize) % prizes.length;
+    setTimeout(() => {
+      setSpinning(false);
 
-  setSelectedPrize(prizes[winningIndex]);
+      const pointerAngle = 270; // top-center
+      const norm = ((finalRotation % 360) + 360) % 360;
+      const rel = ((pointerAngle - norm) % 360 + 360) % 360;
+      const winningIndex = Math.floor(rel / degreesPerPrize) % prizes.length;
 
-  if (prizes[winningIndex].name === "1 Free Spin") {
-    setSpinsLeft((prev) => prev + 1);
-  }
-}, 5000);
-  }
+      setSelectedPrize(prizes[winningIndex]);
+
+      if (prizes[winningIndex].name === "1 Free Spin") {
+        setSpinsLeft((prev) => prev + 1);
+      }
+    }, 5000);
+  };
 
   return (
-    <div className="p-6 flex flex-col items-center text-gray-100">
-      <h1 className="text-3xl font-bold mb-2">Fortune Wheel</h1>
-      <p className="text-gray-400 mb-6">Spin the wheel to win amazing prizes!</p>
+    <div
+      className="p-6 flex flex-col items-center transition-colors duration-300"
+      style={{ color: theme.textColor, fontFamily: theme.fontFamily }}
+    >
+      <h1 className="text-3xl font-bold mb-2" style={{ color: theme.titleColor }}>
+        Fortune Wheel
+      </h1>
+      <p className="mb-6" style={{ color: theme.subTextColor }}>
+        Spin the wheel to win amazing prizes!
+      </p>
 
       {/* Remaining Spins */}
       <div className="mb-4 text-lg font-semibold">
-        Remaining Spins: <span className="text-yellow-400">{spinsLeft}</span>
+        Remaining Spins:{" "}
+        <span style={{ color: theme.highlightColor }}>{spinsLeft}</span>
       </div>
 
       <div className="flex flex-col lg:flex-row items-center gap-12">
         {/* Wheel Container */}
         <div className="relative w-[32rem] h-[32rem]">
-          {/* Spinning Wheel */}
           <div
-            className="absolute w-full h-full rounded-full border-8 border-gray-700 transition-transform duration-[5s] ease-out"
-            style={{ transform: `rotate(${rotation}deg)` }}
+            className="absolute w-full h-full rounded-full border-8 transition-transform duration-[5s] ease-out"
+            style={{
+              transform: `rotate(${rotation}deg)`,
+              borderColor: theme.cardBorderColor,
+              backgroundColor: theme.cardBackground,
+            }}
           >
             {prizes.map((prize, index) => {
               const angle = (360 / prizes.length) * index;
@@ -99,16 +112,28 @@ export default function FortuneWheel() {
             })}
           </div>
 
-          {/* Pointer (pointing inside wheel) */}
+          {/* Pointer */}
           <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
-            <div className="w-0 h-0 border-l-[20px] border-r-[20px] border-t-[30px] border-l-transparent border-r-transparent border-t-red-500"></div>
+            <div
+              className="w-0 h-0 border-l-[20px] border-r-[20px] border-t-[30px]"
+              style={{
+                borderLeftColor: "transparent",
+                borderRightColor: "transparent",
+                borderTopColor: theme.pointerColor,
+              }}
+            ></div>
           </div>
         </div>
 
         {/* Prize List */}
-        <div className="bg-gray-800 p-5 rounded-xl w-64 shadow-lg">
-          <h2 className="text-xl font-bold mb-3">Possible Prizes</h2>
-          <ul className="space-y-2">
+        <div
+          className="p-5 rounded-xl shadow-lg w-64"
+          style={{ backgroundColor: theme.cardBackground }}
+        >
+          <h2 className="text-xl font-bold mb-3" style={{ color: theme.titleColor }}>
+            Possible Prizes
+          </h2>
+          <ul className="space-y-2" style={{ color: theme.textColor }}>
             {prizes.map((p) => (
               <li key={p.id} className="flex items-center gap-2">
                 <span>{p.icon}</span> {p.name}
@@ -122,19 +147,21 @@ export default function FortuneWheel() {
       <button
         onClick={spinWheel}
         disabled={spinning}
-        className={`mt-8 px-10 py-4 rounded-xl font-bold text-white text-lg transition-all duration-300
-          ${
-            spinning
-              ? "bg-gray-600 cursor-not-allowed"
-              : "bg-gradient-to-r from-green-500 to-emerald-600 hover:opacity-90"
-          }`}
+        className={`mt-8 px-10 py-4 rounded-xl font-bold text-lg transition-all duration-300`}
+        style={{
+          background: spinning
+            ? theme.disabledButton
+            : theme.buttonColor,
+          color: theme.buttonTextColor,
+          cursor: spinning ? "not-allowed" : "pointer",
+        }}
       >
         {spinning ? "Spinning..." : "Spin Now"}
       </button>
 
       {/* Result */}
       {selectedPrize && !spinning && (
-        <div className="mt-6 text-2xl font-semibold text-green-400">
+        <div className="mt-6 text-2xl font-semibold" style={{ color: theme.highlightColor }}>
           🎉 You won: {selectedPrize.name} 🎉
         </div>
       )}

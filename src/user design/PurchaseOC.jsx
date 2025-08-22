@@ -1,16 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { FaCoins } from "react-icons/fa";
+import { ThemeContext } from "../context/ThemeContext";
 
 export default function PurchaseOC() {
+  const { theme } = useContext(ThemeContext);
+
   const [selectedPackage, setSelectedPackage] = useState(null);
   const [offers, setOffers] = useState([
-    { id: 2, timeLeft: 300 }, // 5 min
-    { id: 4, timeLeft: 900 }, // 15 min
-    { id: 6, timeLeft: 600 }, // 10 min
-    { id: 8, timeLeft: 1200 }, // 20 min
+    { id: 2, timeLeft: 300 },
+    { id: 4, timeLeft: 900 },
+    { id: 6, timeLeft: 600 },
+    { id: 8, timeLeft: 1200 },
   ]);
 
-  // Countdown for offer timers
   useEffect(() => {
     const interval = setInterval(() => {
       setOffers((prev) =>
@@ -39,7 +41,6 @@ export default function PurchaseOC() {
     { id: 12, coins: 100000, price: 499.99, offer: true },
   ];
 
-  // Convert seconds to MM:SS
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
@@ -47,67 +48,87 @@ export default function PurchaseOC() {
   };
 
   return (
-    <div className="p-6 text-gray-100">
-      {/* Page Heading */}
+    <div
+      className="p-6 transition-colors duration-300"
+      style={{
+        color: theme.textColor || "#E5E7EB",
+        fontFamily: theme.fontFamily,
+      }}
+    >
       <h1 className="text-3xl font-bold mb-2">Purchase OC</h1>
-      <p className="text-gray-400 mb-6">
+      <p className="text-gray-400 mb-6" style={{ color: theme.subTextColor || "#9CA3AF" }}>
         Select a package to buy coins and unlock exciting features!
       </p>
 
-      {/* Packages Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 mb-8">
-  {packages.map((pkg) => {
-    const active = selectedPackage === pkg.id;
-    const offerData = offers.find((o) => o.id === pkg.id);
-    return (
-      <div
-        key={pkg.id}
-        onClick={() => setSelectedPackage(pkg.id)}
-        className={`relative cursor-pointer rounded-xl border transition-all duration-300 flex flex-col justify-between items-center text-center
-          h-44 w-full p-4
-          ${
-            active
-              ? "border-blue-500 bg-gradient-to-br from-blue-500/10 to-indigo-500/10"
-              : "border-gray-700 hover:border-blue-400"
-          }`}
-      >
-        {/* Coin Icon */}
-        <FaCoins className="text-yellow-400 text-4xl mb-2" />
+        {packages.map((pkg) => {
+          const active = selectedPackage === pkg.id;
+          const offerData = offers.find((o) => o.id === pkg.id);
 
-        <h3 className="text-lg font-semibold">{pkg.coins.toLocaleString()} Coins</h3>
-        <p className="text-gray-400">€{pkg.price.toFixed(2)}</p>
+          return (
+            <div
+              key={pkg.id}
+              onClick={() => setSelectedPackage(pkg.id)}
+              className={`relative cursor-pointer rounded-xl border transition-all duration-300 flex flex-col justify-between items-center text-center h-44 w-full p-4`}
+              style={{
+                borderColor: active
+                  ? theme.activeBorder || "#3B82F6"
+                  : theme.inactiveBorder || "#374151",
+                background: active
+                  ? theme.activeBackground || "rgba(59, 130, 246, 0.1)"
+                  : theme.inactiveBackground || "transparent",
+              }}
+            >
+              <FaCoins
+                className="text-4xl mb-2"
+                style={{ color: theme.coinColor || "#FBBF24" }}
+              />
+              <h3 className="text-lg font-semibold">{pkg.coins.toLocaleString()} Coins</h3>
+              <p style={{ color: theme.subTextColor || "#9CA3AF" }}>€{pkg.price.toFixed(2)}</p>
 
-        {/* Offer Badge */}
-        {pkg.offer && (
-          <div className="bg-gradient-to-r from-pink-500 to-red-500 text-white text-xs font-semibold px-2 py-1 rounded-full mt-2">
-            Limited Offer!
-          </div>
-        )}
+              {pkg.offer && (
+                <div
+                  className="text-xs font-semibold px-2 py-1 rounded-full mt-2"
+                  style={{
+                    background: theme.offerBadgeBackground || "linear-gradient(to right, #EC4899, #EF4444)",
+                    color: theme.offerBadgeText || "#FFFFFF",
+                  }}
+                >
+                  Limited Offer!
+                </div>
+              )}
 
-        {/* Countdown Timer */}
-        {pkg.offer && offerData?.timeLeft > 0 && (
-          <p className="text-red-400 text-xs font-bold mt-1">
-            Ends in: {formatTime(offerData.timeLeft)}
-          </p>
-        )}
+              {pkg.offer && offerData?.timeLeft > 0 && (
+                <p
+                  className="text-xs font-bold mt-1"
+                  style={{ color: theme.offerTimer || "#F87171" }}
+                >
+                  Ends in: {formatTime(offerData.timeLeft)}
+                </p>
+              )}
 
-        {/* Active Indicator */}
-        {active && (
-          <p className="text-blue-400 text-sm font-semibold mt-1">Selected</p>
-        )}
+              {active && (
+                <p className="text-sm font-semibold mt-1" style={{ color: theme.activeText || "#3B82F6" }}>
+                  Selected
+                </p>
+              )}
+            </div>
+          );
+        })}
       </div>
-    );
-  })}
-</div>
 
-      {/* Buy Button */}
       <button
         disabled={!selectedPackage}
-        className={`w-full md:w-auto px-8 py-3 rounded-lg font-semibold transition-all duration-300 ${
-          selectedPackage
-            ? "bg-gradient-to-r from-blue-500 to-indigo-600 hover:opacity-90"
-            : "bg-gray-700 cursor-not-allowed"
-        }`}
+        className="w-full md:w-auto px-8 py-3 rounded-lg font-semibold transition-all duration-300"
+        style={{
+          background: selectedPackage
+            ? theme.buttonBackground || "linear-gradient(to right, #3B82F6, #6366F1)"
+            : theme.disabledButtonBackground || "#374151",
+          color: selectedPackage
+            ? theme.buttonText || "#FFFFFF"
+            : theme.disabledButtonText || "#9CA3AF",
+          cursor: selectedPackage ? "pointer" : "not-allowed",
+        }}
       >
         {selectedPackage ? "Proceed to Payment" : "Select a Package"}
       </button>

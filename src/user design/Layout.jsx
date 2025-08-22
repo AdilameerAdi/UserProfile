@@ -1,6 +1,10 @@
 import Sidebar from "./userMain";
+import { useContext } from "react";
+import { ThemeContext } from "../context/ThemeContext";
 
 export default function Layout({ children }) {
+  const { theme } = useContext(ThemeContext);
+
   return (
     <div className="flex flex-col md:flex-row h-screen">
       {/* Sidebar for desktop */}
@@ -9,7 +13,14 @@ export default function Layout({ children }) {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 bg-gradient-to-br from-[#111827] via-[#1F2937] to-[#374151] text-gray-100 overflow-auto">
+      <div
+        className="flex-1 overflow-auto transition-colors duration-300"
+        style={{
+          background: theme.backgroundGradient, // dynamic gradient background
+          color: theme.textColor,
+          fontFamily: theme.fontFamily,
+        }}
+      >
         {/* Mobile Navbar (inside Sidebar component itself) */}
         <div className="md:hidden sticky top-0 z-50">
           <Sidebar mobileOnly />
