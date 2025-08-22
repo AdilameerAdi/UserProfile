@@ -25,8 +25,8 @@ export default function AuthCard({ onSubmit }) {
         <div className={`w-1/2 p-8 flex flex-col justify-center transition-all duration-500 ${isLogin ? "order-2" : "order-1"}`}>
           {isLogin ? (
             <form className="flex flex-col gap-4" onSubmit={onSubmit}>
-              <input type="email" placeholder="Email" className="p-3 rounded bg-gray-700 text-white focus:outline-none" />
-              <input type="password" placeholder="Password" className="p-3 rounded bg-gray-700 text-white focus:outline-none" />
+              <input type="text" name="username" placeholder="Username" className="p-3 rounded bg-gray-700 text-white focus:outline-none" />
+              <input type="password" name="password" placeholder="Password" className="p-3 rounded bg-gray-700 text-white focus:outline-none" />
               <button type="submit" className="bg-blue-500 text-white p-3 rounded hover:bg-blue-600 transition">Sign In</button>
             </form>
           ) : (
