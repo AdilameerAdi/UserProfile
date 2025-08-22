@@ -93,7 +93,7 @@ export default function Sidebar() {
             </button>
             {isProfileOpen && (
               <div
-                className="absolute top-full mt-2 left-0 rounded-lg shadow-lg w-48 border flex flex-col gap-1 p-2"
+                className="absolute top-full mt-2 left-0 rounded-lg shadow-lg w-48 border flex flex-col gap-1 p-2 z-[1000]"
                 style={{ backgroundColor: theme.dropdownBg, borderColor: theme.borderColor }}
               >
                 {profileLinks.map((sub) => (
@@ -137,7 +137,7 @@ export default function Sidebar() {
             </button>
             {isStoreOpen && (
               <div
-                className="absolute top-full mt-2 left-0 rounded-lg shadow-lg w-48 border flex flex-col gap-1 p-2"
+                className="absolute top-full mt-2 left-0 rounded-lg shadow-lg w-48 border flex flex-col gap-1 p-2 z-[1000]"
                 style={{ backgroundColor: theme.dropdownBg, borderColor: theme.borderColor }}
               >
                 {storeLinks.map((sub) => (
@@ -155,29 +155,25 @@ export default function Sidebar() {
                     {sub.name}
                   </NavLink>
                 ))}
+                {/* Mobile: Extra Links inside Store dropdown */}
+                <div className="mt-2 pt-2 border-t" style={{ borderColor: theme.borderColor }}>
+                  {extraLinks.map((link) => (
+                    <a
+                      key={link.name}
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 px-4 py-2 text-sm rounded-md hover:opacity-90"
+                      style={{ color: theme.textColor }}
+                    >
+                      <span className="text-base">{link.icon}</span>
+                      {link.name}
+                    </a>
+                  ))}
+                </div>
               </div>
             )}
           </div>
-
-          {/* Extra Links */}
-          {extraLinks.map((link) => (
-            <a
-              key={link.name}
-              href={link.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="relative flex items-center justify-center w-10 h-10 rounded-lg hover:opacity-80 transition duration-300 group"
-              style={{ color: theme.textColor }}
-            >
-              {link.icon}
-              <span
-                className="absolute left-12 top-1/2 -translate-y-1/2 whitespace-nowrap text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                style={{ backgroundColor: theme.tooltipBg, color: theme.tooltipText }}
-              >
-                {link.name}
-              </span>
-            </a>
-          ))}
         </div>
       </div>
 
@@ -195,7 +191,7 @@ export default function Sidebar() {
           </div>
         </div>
 
-        <nav className="flex-1 overflow-y-auto py-2 flex flex-col items-center gap-2">
+        <nav className="flex-1 overflow-visible py-2 flex flex-col items-center gap-2">
           {mainLinks.map((link) => (
             <NavLink
               key={link.name}
@@ -222,11 +218,7 @@ export default function Sidebar() {
           ))}
 
           {/* Profile Section */}
-          <div
-            className="relative group"
-            onMouseEnter={() => { setIsProfileOpen(true); setIsStoreOpen(false); }}
-            onMouseLeave={() => setIsProfileOpen(false)}
-          >
+          <div className="relative group">
             <button
               onClick={() => { setIsProfileOpen(!isProfileOpen); setIsStoreOpen(false); }}
               className="relative flex items-center justify-center w-12 h-12 rounded-xl hover:opacity-90 transition duration-300"
@@ -265,11 +257,7 @@ export default function Sidebar() {
           </div>
 
           {/* Store Section */}
-          <div
-            className="relative group"
-            onMouseEnter={() => { setIsStoreOpen(true); setIsProfileOpen(false); }}
-            onMouseLeave={() => setIsStoreOpen(false)}
-          >
+          <div className="relative group">
             <button
               onClick={() => { setIsStoreOpen(!isStoreOpen); setIsProfileOpen(false); }}
               className="relative flex items-center justify-center w-12 h-12 rounded-xl hover:opacity-90 transition duration-300"
@@ -306,11 +294,9 @@ export default function Sidebar() {
               </div>
             )}
           </div>
-        </nav>
 
-        {/* Footer / Extra Links */}
-        <div className="px-2 py-3 border-t" style={{ borderColor: theme.borderColor }}>
-          <div className="flex items-center justify-center gap-2">
+          {/* Desktop: Extra Links right under Store */}
+          <div className="mt-2 flex flex-col items-center gap-2">
             {extraLinks.map((link) => (
               <a
                 key={link.name}
@@ -330,7 +316,9 @@ export default function Sidebar() {
               </a>
             ))}
           </div>
-        </div>
+        </nav>
+
+        {/* Footer removed to avoid pushing extra links too low */}
       </div>
     </>
   );
