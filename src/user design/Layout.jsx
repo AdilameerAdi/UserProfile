@@ -16,7 +16,7 @@ export default function Layout({ children }) {
       <div
         className="flex-1 overflow-auto transition-colors duration-300"
         style={{
-          background: theme.backgroundGradient, // dynamic gradient background
+          background: theme.backgroundGradient,
           color: theme.textColor,
           fontFamily: theme.fontFamily,
         }}

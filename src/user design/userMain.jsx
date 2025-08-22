@@ -58,10 +58,10 @@ export default function Sidebar() {
                     : "hover:opacity-80"
                 } group`
               }
-              style={{
+              style={({ isActive }) => ({
                 backgroundColor: isActive ? theme.activeBg : "transparent",
                 color: isActive ? theme.activeText : theme.textColor,
-              }}
+              })}
             >
               {link.icon}
               <span
@@ -103,11 +103,11 @@ export default function Sidebar() {
                     className={({ isActive }) =>
                       `block px-4 py-2 text-sm border-l-4 transition-all duration-300`
                     }
-                    style={{
+                    style={({ isActive }) => ({
                       color: isActive ? theme.activeText : theme.textColor,
                       backgroundColor: isActive ? theme.activeBg : "transparent",
                       borderColor: isActive ? theme.activeBorder : "transparent",
-                    }}
+                    })}
                     onClick={() => setIsProfileOpen(false)}
                   >
                     {sub.name}
@@ -145,11 +145,11 @@ export default function Sidebar() {
                     key={sub.name}
                     to={sub.path}
                     className={({ isActive }) => `block px-4 py-2 text-sm border-l-4 transition-all duration-300`}
-                    style={{
+                    style={({ isActive }) => ({
                       color: isActive ? theme.activeText : theme.textColor,
                       backgroundColor: isActive ? theme.activeBg : "transparent",
                       borderColor: isActive ? theme.activeBorder : "transparent",
-                    }}
+                    })}
                     onClick={() => setIsStoreOpen(false)}
                   >
                     {sub.name}

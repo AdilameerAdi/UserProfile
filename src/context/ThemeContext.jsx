@@ -68,15 +68,43 @@ const themes = {
   },
 };
 
+function createThemeWithAliases(name) {
+  const base = themes[name] || themes.dark;
+  const fontFamily = 'Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"';
+  return {
+    ...base,
+    // Common aliases used across components
+    textColor: base.text,
+    subTextColor: base.subText,
+    bgColor: base.background,
+    backgroundGradient: base.background,
+    gradientText: "linear-gradient(90deg, #3b82f6, #8b5cf6)",
+    fontFamily,
+    activeBg: base.activeTabBg,
+    activeText: base.buttonText,
+    activeBorder: base.activeTabBorder,
+    cardBackground: base.cardBg,
+    cardBorderColor: base.borderColor,
+    titleColor: base.text,
+    buttonColor: base.primary,
+    buttonTextColor: base.buttonText,
+    disabledButton: base.inactiveTabBg,
+    pointerColor: base.primary,
+    highlightColor: base.primary,
+  };
+}
+
 export function ThemeProvider({ children }) {
-  const [theme, setTheme] = useState(themes.dark);
+  const [currentThemeName, setCurrentThemeName] = useState("dark");
+  const [theme, setTheme] = useState(createThemeWithAliases("dark"));
 
   const switchTheme = (name) => {
-    setTheme(themes[name]);
+    setCurrentThemeName(name);
+    setTheme(createThemeWithAliases(name));
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, switchTheme }}>
+    <ThemeContext.Provider value={{ theme, switchTheme, currentThemeName }}>
       {children}
     </ThemeContext.Provider>
   );
