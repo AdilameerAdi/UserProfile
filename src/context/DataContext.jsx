@@ -88,6 +88,35 @@ export function DataProvider({ children }) {
     }));
   };
 
+  // === NEW: Remove functions ===
+  const removeCharacter = (id) => {
+    setStore((prev) => ({
+      ...prev,
+      characters: prev.characters.filter((c) => c.id !== id),
+    }));
+  };
+
+  const removeOcPackage = (id) => {
+    setStore((prev) => ({
+      ...prev,
+      ocPackages: prev.ocPackages.filter((p) => p.id !== id),
+    }));
+  };
+
+  const removeShopItem = (id) => {
+    setStore((prev) => ({
+      ...prev,
+      shopItems: prev.shopItems.filter((s) => s.id !== id),
+    }));
+  };
+
+  const removeWheelReward = (id) => {
+    setStore((prev) => ({
+      ...prev,
+      wheelRewards: prev.wheelRewards.filter((w) => w.id !== id),
+    }));
+  };
+
   const value = useMemo(
     () => ({
       store,
@@ -95,6 +124,10 @@ export function DataProvider({ children }) {
       addOcPackage,
       addShopItem,
       addWheelReward,
+      removeCharacter,
+      removeOcPackage,
+      removeShopItem,
+      removeWheelReward,
     }),
     [store]
   );

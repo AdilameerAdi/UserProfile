@@ -1,113 +1,310 @@
-import { useContext, useState } from "react";
+import { useContext, useMemo, useState } from "react";
 import { ThemeContext } from "../context/ThemeContext";
 import { useData } from "../context/DataContext";
 
 export default function Admin() {
   const { theme } = useContext(ThemeContext);
-  const { store, addCharacter, addOcPackage, addShopItem, addWheelReward } = useData();
+  const {
+    store,
+    uploadFile,
+    addCharacter,
+    updateCharacter,
+    removeCharacter,
+    addOcPackage,
+    updateOcPackage,
+    removeOcPackage,
+    addShopItem,
+    updateShopItem,
+    removeShopItem,
+    addWheelReward,
+    updateWheelReward,
+    removeWheelReward,
+  } = useData();
 
-  // Local form states
-  const [character, setCharacter] = useState({ name: "", imageUrl: "" });
-  const [pkg, setPkg] = useState({ coins: "", price: "", offer: false, offerTimeLeft: 0 });
-  const [item, setItem] = useState({ name: "", price: "", color: "bg-blue-500", offer: false, offerTimeLeft: 0, icon: "🛒" });
+  const [character, setCharacter] = useState({ name: "", imageUrl: "", _file: null });
+  const [pkg, setPkg] = useState({ coins: "", price: "", offer: false, offerEndAt: "" });
+  const [item, setItem] = useState({ name: "", price: "", color: "bg-blue-500", offer: false, offerEndAt: "", icon: "🛒", _file: null, imageUrl: "" });
   const [reward, setReward] = useState({ name: "", color: "bg-yellow-500", icon: "🎁" });
+  const [edit, setEdit] = useState({ type: null, id: null });
+  const isEditing = useMemo(() => Boolean(edit.id && edit.type), [edit]);
+
+  const resetAll = () => {
+    setCharacter({ name: "", imageUrl: "", _file: null });
+    setPkg({ coins: "", price: "", offer: false, offerEndAt: "" });
+    setItem({ name: "", price: "", color: "bg-blue-500", offer: false, offerEndAt: "", icon: "🛒", _file: null, imageUrl: "" });
+    setReward({ name: "", color: "bg-yellow-500", icon: "🎁" });
+    setEdit({ type: null, id: null });
+  };
+
+  const saveCharacter = async () => {
+    if (!character.name.trim()) return alert("Please enter character name");
+    let finalImageUrl = character.imageUrl;
+    if (character._file && typeof uploadFile === "function") {
+      finalImageUrl = await uploadFile(character._file);
+    }
+    const payload = { name: character.name.trim(), imageUrl: finalImageUrl || "" };
+    if (isEditing && edit.type === "character") {
+      await updateCharacter?.(edit.id, payload);
+    } else {
+      await addCharacter(payload);
+    }
+    resetAll();
+  };
+
+ const savePkg = () => {
+  let offerEndAt = null;
+  if (pkg.offer && pkg.offerDuration) {
+    const days = parseInt(pkg.offerDuration, 10);
+    offerEndAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+  }
+  // Save pkg with computed offerEndAt
+  addOcPackage({ ...pkg, offerEndAt });
+  resetAll();
+};
+
+ const saveItem = () => {
+  let offerEndAt = null;
+  if (item.offer && item.offerDuration) {
+    const days = parseInt(item.offerDuration, 10);
+    offerEndAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+  }
+  addShopItem({ ...item, offerEndAt });
+  resetAll();
+};
+
+
+  const saveReward = async () => {
+    if (!reward.name.trim()) return alert("Enter reward name");
+    const payload = { name: reward.name.trim(), color: reward.color || "bg-yellow-500", icon: reward.icon || "🎁" };
+    if (isEditing && edit.type === "reward") {
+      await updateWheelReward?.(edit.id, payload);
+    } else {
+      await addWheelReward(payload);
+    }
+    resetAll();
+  };
+
+  const loadForEdit = (type, obj) => {
+    setEdit({ type, id: obj.id });
+    if (type === "character") setCharacter({ name: obj.name || "", imageUrl: obj.imageUrl || "", _file: null });
+    if (type === "pkg") setPkg({ coins: String(obj.coins ?? ""), price: String(obj.price ?? ""), offer: Boolean(obj.offer), offerEndAt: obj.offerEndAt || "" });
+    if (type === "item") setItem({ name: obj.name || "", price: String(obj.price ?? ""), color: obj.color || "bg-blue-500", offer: Boolean(obj.offer), offerEndAt: obj.offerEndAt || "", icon: obj.icon || "🛒", _file: null, imageUrl: obj.imageUrl || "" });
+    if (type === "reward") setReward({ name: obj.name || "", color: obj.color || "bg-yellow-500", icon: obj.icon || "🎁" });
+  };
+
+  const handleDelete = async (type, id) => {
+    const confirmDelete = window.confirm("Delete this item?");
+    if (!confirmDelete) return;
+    if (type === "character") await removeCharacter?.(id);
+    if (type === "pkg") await removeOcPackage?.(id);
+    if (type === "item") await removeShopItem?.(id);
+    if (type === "reward") await removeWheelReward?.(id);
+    if (isEditing && edit.id === id && edit.type === type) resetAll();
+  };
 
   return (
     <div className="p-6 space-y-8" style={{ color: theme.textColor, fontFamily: theme.fontFamily }}>
       <h1 className="text-3xl font-bold">Admin Panel</h1>
-
       {/* Characters */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="p-4 rounded-xl border" style={{ background: theme.cardBackground, borderColor: theme.cardBorderColor }}>
-          <h2 className="text-xl font-semibold mb-3">Add Character</h2>
-          <div className="space-y-3">
-            <input className="w-full p-2 rounded bg-gray-800" placeholder="Character name" value={character.name} onChange={(e) => setCharacter({ ...character, name: e.target.value })} />
-            <input className="w-full p-2 rounded bg-gray-800" placeholder="Image URL (optional)" value={character.imageUrl} onChange={(e) => setCharacter({ ...character, imageUrl: e.target.value })} />
-            <button className="px-4 py-2 rounded bg-blue-600" onClick={() => { addCharacter(character); setCharacter({ name: "", imageUrl: "" }); }}>Add</button>
+        <div className="p-4 rounded-xl border space-y-3" style={{ background: theme.cardBackground, borderColor: theme.cardBorderColor }}>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">{isEditing && edit.type === "character" ? "Edit Character" : "Add Character"}</h2>
+            {isEditing && edit.type === "character" && <button className="text-sm underline" onClick={resetAll}>Cancel edit</button>}
+          </div>
+          <input className="w-full p-2 rounded bg-gray-800" placeholder="Character name" value={character.name} onChange={(e) => setCharacter({ ...character, name: e.target.value })} />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <input className="w-full p-2 rounded bg-gray-800" placeholder="Image URL (optional)" value={character.imageUrl} onChange={(e) => setCharacter({ ...character, imageUrl: e.target.value, _file: null })} />
+            <label className="block w-full">
+              <span className="text-sm">Upload image from device</span>
+              <input type="file" accept="image/*" className="w-full mt-1" onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  const preview = URL.createObjectURL(file);
+                  setCharacter({ ...character, imageUrl: preview, _file: file });
+                }
+              }} />
+            </label>
+          </div>
+          {character.imageUrl && <img src={character.imageUrl} alt="preview" className="h-24 w-24 object-cover rounded-lg border border-gray-700" />}
+          <div className="flex gap-2">
+            <button className="px-4 py-2 rounded bg-blue-600" onClick={saveCharacter}>{isEditing && edit.type === "character" ? "Update" : "Add"}</button>
+            {isEditing && edit.type === "character" && <button className="px-4 py-2 rounded bg-gray-700" onClick={resetAll}>Cancel</button>}
           </div>
         </div>
-
         <div className="p-4 rounded-xl border" style={{ background: theme.cardBackground, borderColor: theme.cardBorderColor }}>
           <h3 className="text-lg font-semibold mb-2">Existing Characters</h3>
-          <ul className="space-y-1 text-sm">
+          <ul className="space-y-2 text-sm">
             {store.characters.map((c) => (
-              <li key={c.id}>{c.name}</li>
+              <li key={c.id} className="flex items-center justify-between gap-3 p-2 rounded bg-gray-800/40">
+                <div className="flex items-center gap-2">
+                  {c.imageUrl ? <img src={c.imageUrl} className="h-8 w-8 rounded object-cover" /> : <div className="h-8 w-8 rounded bg-gray-700" />}
+                  <span>{c.name}</span>
+                </div>
+                <div className="flex gap-2">
+                  <button className="px-2 py-1 rounded bg-amber-600" onClick={() => loadForEdit("character", c)}>Edit</button>
+                  <button className="px-2 py-1 rounded bg-red-600" onClick={() => handleDelete("character", c.id)}>Delete</button>
+                </div>
+              </li>
             ))}
           </ul>
         </div>
       </section>
-
       {/* OC Packages */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="p-4 rounded-xl border" style={{ background: theme.cardBackground, borderColor: theme.cardBorderColor }}>
-          <h2 className="text-xl font-semibold mb-3">Add OC Package</h2>
-          <div className="space-y-3">
-            <input className="w-full p-2 rounded bg-gray-800" placeholder="Coins" type="number" value={pkg.coins} onChange={(e) => setPkg({ ...pkg, coins: e.target.value })} />
-            <input className="w-full p-2 rounded bg-gray-800" placeholder="Price" type="number" value={pkg.price} onChange={(e) => setPkg({ ...pkg, price: e.target.value })} />
-            <div className="flex items-center gap-2">
-              <input id="pkgOffer" type="checkbox" checked={pkg.offer} onChange={(e) => setPkg({ ...pkg, offer: e.target.checked })} />
-              <label htmlFor="pkgOffer">Offer</label>
-            </div>
-            <input className="w-full p-2 rounded bg-gray-800" placeholder="Offer time (seconds)" type="number" value={pkg.offerTimeLeft} onChange={(e) => setPkg({ ...pkg, offerTimeLeft: e.target.value })} />
-            <button className="px-4 py-2 rounded bg-blue-600" onClick={() => { addOcPackage(pkg); setPkg({ coins: "", price: "", offer: false, offerTimeLeft: 0 }); }}>Add</button>
+        <div className="p-4 rounded-xl border space-y-3" style={{ background: theme.cardBackground, borderColor: theme.cardBorderColor }}>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">{isEditing && edit.type === "pkg" ? "Edit OC Package" : "Add OC Package"}</h2>
+            {isEditing && edit.type === "pkg" && <button className="text-sm underline" onClick={resetAll}>Cancel edit</button>}
+          </div>
+          <input className="w-full p-2 rounded bg-gray-800" placeholder="Coins" type="number" value={pkg.coins} onChange={(e) => setPkg({ ...pkg, coins: e.target.value })} />
+          <input className="w-full p-2 rounded bg-gray-800" placeholder="Price" type="number" value={pkg.price} onChange={(e) => setPkg({ ...pkg, price: e.target.value })} />
+          <div className="flex items-center gap-2">
+            <input id="pkgOffer" type="checkbox" checked={pkg.offer} onChange={(e) => setPkg({ ...pkg, offer: e.target.checked })} />
+            <label htmlFor="pkgOffer">Offer</label>
+          </div>
+         {pkg.offer && (
+  <label className="block">
+    <span className="text-sm">Offer Duration</span>
+    <select
+      className="w-full p-2 rounded bg-gray-800 mt-1"
+      value={pkg.offerDuration || ""}
+      onChange={(e) => setPkg({ ...pkg, offerDuration: e.target.value })}
+    >
+      <option value="">Select duration</option>
+      <option value="1">1 Day</option>
+      <option value="2">2 Days</option>
+      <option value="3">3 Days</option>
+      <option value="7">7 Days</option>
+      <option value="14">14 Days</option>
+    </select>
+  </label>
+)}
+          <div className="flex gap-2">
+            <button className="px-4 py-2 rounded bg-blue-600" onClick={savePkg}>{isEditing && edit.type === "pkg" ? "Update" : "Add"}</button>
+            {isEditing && edit.type === "pkg" && <button className="px-4 py-2 rounded bg-gray-700" onClick={resetAll}>Cancel</button>}
           </div>
         </div>
-
         <div className="p-4 rounded-xl border" style={{ background: theme.cardBackground, borderColor: theme.cardBorderColor }}>
           <h3 className="text-lg font-semibold mb-2">Existing OC Packages</h3>
-          <ul className="space-y-1 text-sm">
+          <ul className="space-y-2 text-sm">
             {store.ocPackages.map((p) => (
-              <li key={p.id}>{p.coins} coins — €{p.price} {p.offer ? `(offer ${p.offerTimeLeft}s)` : ""}</li>
+              <li key={p.id} className="flex items-center justify-between gap-3 p-2 rounded bg-gray-800/40">
+                <div className="flex items-center gap-3">
+                  <span>{p.coins} coins — €{p.price}</span>
+                  {p.offer && <span className="text-amber-400 text-xs">Offer until {p.offerEndAt ? new Date(p.offerEndAt).toLocaleString() : "?"}</span>}
+                </div>
+                <div className="flex gap-2">
+                  <button className="px-2 py-1 rounded bg-amber-600" onClick={() => loadForEdit("pkg", p)}>Edit</button>
+                  <button className="px-2 py-1 rounded bg-red-600" onClick={() => handleDelete("pkg", p.id)}>Delete</button>
+                </div>
+              </li>
             ))}
           </ul>
         </div>
       </section>
-
       {/* Shop Items */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="p-4 rounded-xl border" style={{ background: theme.cardBackground, borderColor: theme.cardBorderColor }}>
-          <h2 className="text-xl font-semibold mb-3">Add Shop Item</h2>
-          <div className="space-y-3">
-            <input className="w-full p-2 rounded bg-gray-800" placeholder="Item name" value={item.name} onChange={(e) => setItem({ ...item, name: e.target.value })} />
-            <input className="w-full p-2 rounded bg-gray-800" placeholder="Price" type="number" value={item.price} onChange={(e) => setItem({ ...item, price: e.target.value })} />
-            <input className="w-full p-2 rounded bg-gray-800" placeholder="Tailwind color class (e.g., bg-red-500)" value={item.color} onChange={(e) => setItem({ ...item, color: e.target.value })} />
-            <div className="flex items-center gap-2">
-              <input id="itemOffer" type="checkbox" checked={item.offer} onChange={(e) => setItem({ ...item, offer: e.target.checked })} />
-              <label htmlFor="itemOffer">Offer</label>
-            </div>
-            <input className="w-full p-2 rounded bg-gray-800" placeholder="Offer time (seconds)" type="number" value={item.offerTimeLeft} onChange={(e) => setItem({ ...item, offerTimeLeft: e.target.value })} />
-            <input className="w-full p-2 rounded bg-gray-800" placeholder="Icon (emoji allowed)" value={item.icon} onChange={(e) => setItem({ ...item, icon: e.target.value })} />
-            <button className="px-4 py-2 rounded bg-blue-600" onClick={() => { addShopItem(item); setItem({ name: "", price: "", color: "bg-blue-500", offer: false, offerTimeLeft: 0, icon: "🛒" }); }}>Add</button>
+        <div className="p-4 rounded-xl border space-y-3" style={{ background: theme.cardBackground, borderColor: theme.cardBorderColor }}>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">{isEditing && edit.type === "item" ? "Edit Shop Item" : "Add Shop Item"}</h2>
+            {isEditing && edit.type === "item" && <button className="text-sm underline" onClick={resetAll}>Cancel edit</button>}
+          </div>
+          <input className="w-full p-2 rounded bg-gray-800" placeholder="Item name" value={item.name} onChange={(e) => setItem({ ...item, name: e.target.value })} />
+          <input className="w-full p-2 rounded bg-gray-800" placeholder="Price" type="number" value={item.price} onChange={(e) => setItem({ ...item, price: e.target.value })} />
+          <input className="w-full p-2 rounded bg-gray-800" placeholder="Tailwind color class (e.g., bg-red-500)" value={item.color} onChange={(e) => setItem({ ...item, color: e.target.value })} />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <input className="w-full p-2 rounded bg-gray-800" placeholder="Image URL (optional)" value={item.imageUrl} onChange={(e) => setItem({ ...item, imageUrl: e.target.value, _file: null })} />
+            <label className="block w-full">
+              <span className="text-sm">Upload image from device</span>
+              <input type="file" accept="image/*" className="w-full mt-1" onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  const preview = URL.createObjectURL(file);
+                  setItem({ ...item, imageUrl: preview, _file: file });
+                }
+              }} />
+            </label>
+          </div>
+          {item.imageUrl && <img src={item.imageUrl} alt="preview" className="h-24 w-24 object-cover rounded-lg border border-gray-700" />}
+          <div className="flex items-center gap-2">
+            <input id="itemOffer" type="checkbox" checked={item.offer} onChange={(e) => setItem({ ...item, offer: e.target.checked })} />
+            <label htmlFor="itemOffer">Offer</label>
+          </div>
+         {item.offer && (
+  <label className="block">
+    <span className="text-sm">Offer Duration</span>
+    <select
+      className="w-full p-2 rounded bg-gray-800 mt-1"
+      value={item.offerDuration || ""}
+      onChange={(e) => setItem({ ...item, offerDuration: e.target.value })}
+    >
+      <option value="">Select duration</option>
+      <option value="1">1 Day</option>
+      <option value="2">2 Days</option>
+      <option value="3">3 Days</option>
+      <option value="7">7 Days</option>
+      <option value="14">14 Days</option>
+    </select>
+  </label>
+)}
+
+          <input className="w-full p-2 rounded bg-gray-800" placeholder="Icon (emoji allowed)" value={item.icon} onChange={(e) => setItem({ ...item, icon: e.target.value })} />
+          <div className="flex gap-2">
+            <button className="px-4 py-2 rounded bg-blue-600" onClick={saveItem}>{isEditing && edit.type === "item" ? "Update" : "Add"}</button>
+            {isEditing && edit.type === "item" && <button className="px-4 py-2 rounded bg-gray-700" onClick={resetAll}>Cancel</button>}
           </div>
         </div>
-
         <div className="p-4 rounded-xl border" style={{ background: theme.cardBackground, borderColor: theme.cardBorderColor }}>
           <h3 className="text-lg font-semibold mb-2">Existing Shop Items</h3>
-          <ul className="space-y-1 text-sm">
+          <ul className="space-y-2 text-sm">
             {store.shopItems.map((s) => (
-              <li key={s.id}>{s.name} — {s.price} {s.offer ? `(offer ${s.offerTimeLeft}s)` : ""}</li>
+              <li key={s.id} className="flex items-center justify-between gap-3 p-2 rounded bg-gray-800/40">
+                <div className="flex items-center gap-2">
+                  {s.imageUrl ? <img src={s.imageUrl} className="h-8 w-8 rounded object-cover" /> : <div className="h-8 w-8 rounded bg-gray-700" />}
+                  <span>{s.name} — {s.price}</span>
+                  {s.offer && <span className="text-amber-400 text-xs">Offer until {s.offerEndAt ? new Date(s.offerEndAt).toLocaleString() : "?"}</span>}
+                </div>
+                <div className="flex gap-2">
+                  <button className="px-2 py-1 rounded bg-amber-600" onClick={() => loadForEdit("item", s)}>Edit</button>
+                  <button className="px-2 py-1 rounded bg-red-600" onClick={() => handleDelete("item", s.id)}>Delete</button>
+                
+                </div>
+              </li>
             ))}
           </ul>
         </div>
       </section>
 
-      {/* Fortune Wheel Rewards */}
+      {/* Wheel Rewards */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="p-4 rounded-xl border" style={{ background: theme.cardBackground, borderColor: theme.cardBorderColor }}>
-          <h2 className="text-xl font-semibold mb-3">Add Fortune Wheel Reward</h2>
-          <div className="space-y-3">
-            <input className="w-full p-2 rounded bg-gray-800" placeholder="Reward name" value={reward.name} onChange={(e) => setReward({ ...reward, name: e.target.value })} />
-            <input className="w-full p-2 rounded bg-gray-800" placeholder="Tailwind color class (e.g., bg-teal-500)" value={reward.color} onChange={(e) => setReward({ ...reward, color: e.target.value })} />
-            <input className="w-full p-2 rounded bg-gray-800" placeholder="Icon (emoji allowed)" value={reward.icon} onChange={(e) => setReward({ ...reward, icon: e.target.value })} />
-            <button className="px-4 py-2 rounded bg-blue-600" onClick={() => { addWheelReward(reward); setReward({ name: "", color: "bg-yellow-500", icon: "🎁" }); }}>Add</button>
+        <div className="p-4 rounded-xl border space-y-3" style={{ background: theme.cardBackground, borderColor: theme.cardBorderColor }}>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">{isEditing && edit.type === "reward" ? "Edit Wheel Reward" : "Add Wheel Reward"}</h2>
+            {isEditing && edit.type === "reward" && <button className="text-sm underline" onClick={resetAll}>Cancel edit</button>}
+          </div>
+          <input className="w-full p-2 rounded bg-gray-800" placeholder="Reward name" value={reward.name} onChange={(e) => setReward({ ...reward, name: e.target.value })} />
+          <input className="w-full p-2 rounded bg-gray-800" placeholder="Tailwind color class" value={reward.color} onChange={(e) => setReward({ ...reward, color: e.target.value })} />
+          <input className="w-full p-2 rounded bg-gray-800" placeholder="Icon (emoji allowed)" value={reward.icon} onChange={(e) => setReward({ ...reward, icon: e.target.value })} />
+          <div className="flex gap-2">
+            <button className="px-4 py-2 rounded bg-blue-600" onClick={saveReward}>{isEditing && edit.type === "reward" ? "Update" : "Add"}</button>
+            {isEditing && edit.type === "reward" && <button className="px-4 py-2 rounded bg-gray-700" onClick={resetAll}>Cancel</button>}
           </div>
         </div>
-
         <div className="p-4 rounded-xl border" style={{ background: theme.cardBackground, borderColor: theme.cardBorderColor }}>
           <h3 className="text-lg font-semibold mb-2">Existing Wheel Rewards</h3>
-          <ul className="space-y-1 text-sm">
-            {store.wheelRewards.map((w) => (
-              <li key={w.id}>{w.name}</li>
+          <ul className="space-y-2 text-sm">
+            {store.wheelRewards.map((r) => (
+              <li key={r.id} className="flex items-center justify-between gap-3 p-2 rounded bg-gray-800/40">
+                <div className="flex items-center gap-2">
+                  <span className={`${r.color} px-2 py-1 rounded`}>{r.icon}</span>
+                  <span>{r.name}</span>
+                </div>
+                <div className="flex gap-2">
+                  <button className="px-2 py-1 rounded bg-amber-600" onClick={() => loadForEdit("reward", r)}>Edit</button>
+                  <button className="px-2 py-1 rounded bg-red-600" onClick={() => handleDelete("reward", r.id)}>Delete</button>
+                </div>
+              </li>
             ))}
           </ul>
         </div>
