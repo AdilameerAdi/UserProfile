@@ -1,17 +1,14 @@
 import { useState, useEffect, useContext } from "react";
 import { FaCoins } from "react-icons/fa";
 import { ThemeContext } from "../context/ThemeContext";
+import { useData } from "../context/DataContext";
 
 export default function PurchaseOC() {
   const { theme } = useContext(ThemeContext);
+  const { ocPackages } = useData();
 
   const [selectedPackage, setSelectedPackage] = useState(null);
-  const [offers, setOffers] = useState([
-    { id: 2, timeLeft: 300 },
-    { id: 4, timeLeft: 900 },
-    { id: 6, timeLeft: 600 },
-    { id: 8, timeLeft: 1200 },
-  ]);
+  const [offers, setOffers] = useState([]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -26,20 +23,7 @@ export default function PurchaseOC() {
     return () => clearInterval(interval);
   }, []);
 
-  const packages = [
-    { id: 1, coins: 500, price: 4.99, offer: false },
-    { id: 2, coins: 1200, price: 9.99, offer: true },
-    { id: 3, coins: 2500, price: 18.99, offer: false },
-    { id: 4, coins: 5000, price: 34.99, offer: true },
-    { id: 5, coins: 8000, price: 54.99, offer: false },
-    { id: 6, coins: 10000, price: 64.99, offer: true },
-    { id: 7, coins: 15000, price: 94.99, offer: false },
-    { id: 8, coins: 20000, price: 124.99, offer: true },
-    { id: 9, coins: 30000, price: 174.99, offer: false },
-    { id: 10, coins: 40000, price: 224.99, offer: false },
-    { id: 11, coins: 50000, price: 274.99, offer: false },
-    { id: 12, coins: 100000, price: 499.99, offer: true },
-  ];
+  const packages = ocPackages;
 
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60);
@@ -84,7 +68,7 @@ export default function PurchaseOC() {
                 style={{ color: theme.coinColor || "#FBBF24" }}
               />
               <h3 className="text-lg font-semibold">{pkg.coins.toLocaleString()} Coins</h3>
-              <p style={{ color: theme.subTextColor || "#9CA3AF" }}>€{pkg.price.toFixed(2)}</p>
+              <p style={{ color: theme.subTextColor || "#9CA3AF" }}>€{Number(pkg.price).toFixed(2)}</p>
 
               {pkg.offer && (
                 <div

@@ -27,6 +27,10 @@ export default function AuthCard({ onSubmit }) {
             <form className="flex flex-col gap-4" onSubmit={onSubmit}>
               <input type="text" name="username" placeholder="Username" className="p-3 rounded bg-gray-700 text-white focus:outline-none" />
               <input type="password" name="password" placeholder="Password" className="p-3 rounded bg-gray-700 text-white focus:outline-none" />
+              <label className="flex items-center gap-2 text-gray-300">
+                <input type="checkbox" name="isAdmin" className="accent-blue-500" />
+                Login as Admin
+              </label>
               <button type="submit" className="bg-blue-500 text-white p-3 rounded hover:bg-blue-600 transition">Sign In</button>
             </form>
           ) : (

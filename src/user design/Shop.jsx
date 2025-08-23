@@ -10,6 +10,7 @@ import {
   GiCat,
   GiCrystalBars,
 } from "react-icons/gi";
+import { useData } from "../context/DataContext";
 
 export default function Shop() {
   const [selectedItem, setSelectedItem] = useState(null);
@@ -18,6 +19,7 @@ export default function Shop() {
     { id: 4, timeLeft: 300 }, // 5 min
     { id: 7, timeLeft: 900 }, // 15 min
   ]);
+  const { shopItems } = useData();
 
   // Countdown logic for offers
   useEffect(() => {
@@ -32,73 +34,21 @@ export default function Shop() {
     return () => clearInterval(interval);
   }, []);
 
-  // Shop items with icons and unique color themes
-  const items = [
-    {
-      id: 1,
-      name: "Magic Sword",
-      price: 500,
-      icon: <GiSwordman size={28} />,
-      color: "bg-blue-500",
-      offer: false,
-    },
-    {
-      id: 2,
-      name: "Dragon Shield",
-      price: 800,
-      icon: <GiShield size={28} />,
-      color: "bg-purple-500",
-      offer: true,
-    },
-    {
-      id: 3,
-      name: "Health Potion Pack",
-      price: 300,
-      icon: <GiHealthNormal size={28} />,
-      color: "bg-green-500",
-      offer: false,
-    },
-    {
-      id: 4,
-      name: "Epic Armor",
-      price: 1500,
-      icon: <GiArmorVest size={28} />,
-      color: "bg-pink-500",
-      offer: true,
-    },
-    {
-      id: 5,
-      name: "Treasure Chest",
-      price: 2000,
-      icon: <GiTreasureMap size={28} />,
-      color: "bg-yellow-500",
-      offer: false,
-    },
-    {
-      id: 6,
-      name: "Mount Upgrade",
-      price: 1200,
-      icon: <GiHorseHead size={28} />,
-      color: "bg-orange-500",
-      offer: false,
-    },
-    {
-      id: 7,
-      name: "Rare Pet",
-      price: 2500,
-      icon: <GiCat size={28} />,
-      color: "bg-red-500",
-      offer: true,
-    },
-    {
-      id: 8,
-      name: "Gem Pack",
-      price: 400,
-      icon: <GiCrystalBars size={28} />,
-      color: "bg-teal-500",
-      offer: false,
-    },
-  ];
+  // Map of simple icon names to components, fallback to a default
+  const iconMap = {
+    sword: <GiSwordman size={28} />,
+    shield: <GiShield size={28} />,
+    health: <GiHealthNormal size={28} />,
+    armor: <GiArmorVest size={28} />,
+    treasure: <GiTreasureMap size={28} />,
+    mount: <GiHorseHead size={28} />,
+    pet: <GiCat size={28} />,
+    gem: <GiCrystalBars size={28} />,
+  };
+  const items = shopItems.map((it) => ({
+    ...it,
+    icon: iconMap[it.icon] || <GiCrystalBars size={28} />,
+  }));
 
   // Format countdown MM:SS
   const formatTime = (seconds) => {
@@ -145,22 +95,22 @@ export default function Shop() {
               <h3 className="text-sm font-semibold mb-1">{item.name}</h3>
 
               {/* Price Section */}
-             <div className="flex flex-col items-center">
-  {item.offer ? (
-    <>
-      <p className="flex items-center gap-1 text-gray-400 line-through text-base font-semibold">
-        <FaCoins /> {item.price}
-      </p>
-      <p className="flex items-center gap-1 text-yellow-400 font-bold text-lg">
-        <FaCoins /> {discountedPrice}
-      </p>
-    </>
-  ) : (
-    <p className="flex items-center gap-1 text-yellow-400 font-bold">
-      <FaCoins /> {item.price}
-    </p>
-  )}
-</div>
+              <div className="flex flex-col items-center">
+                {item.offer ? (
+                  <>
+                    <p className="flex items-center gap-1 text-gray-400 line-through text-base font-semibold">
+                      <FaCoins /> {item.price}
+                    </p>
+                    <p className="flex items-center gap-1 text-yellow-400 font-bold text-lg">
+                      <FaCoins /> {discountedPrice}
+                    </p>
+                  </>
+                ) : (
+                  <p className="flex items-center gap-1 text-yellow-400 font-bold">
+                    <FaCoins /> {item.price}
+                  </p>
+                )}
+              </div>
 
               {/* Offer Badge */}
               {item.offer && (

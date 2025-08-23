@@ -2,6 +2,8 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./signup/AuthContext";
 import ProtectedRoute from "./signup/ProtectedRoute";
 import Login from "./signup/Login";
+import AdminRoute from "./admin/AdminRoute";
+import AdminPanel from "./admin/AdminPanel";
 
 import Layout from "./user design/Layout";
 import Navbar from "./user design/navbar";
@@ -30,6 +32,15 @@ export default function App() {
         <Routes>
           {/* Login page */}
           <Route path="/login" element={<Login />} />
+          <Route
+            path="/admin"
+            element={
+              <AdminRoute>
+                <Navbar />
+                <AdminPanel />
+              </AdminRoute>
+            }
+          />
 
           {/* Protected routes */}
           <Route

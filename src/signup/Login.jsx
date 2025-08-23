@@ -11,14 +11,20 @@ export default function Login() {
     const formData = new FormData(e.currentTarget);
     const username = formData.get("username");
     const password = formData.get("password");
+    const isAdmin = formData.get("isAdmin") === "on";
+
+    if (isAdmin && username === "Adil" && password === "Adil") {
+      login({ username, isAdmin: true });
+      navigate("/admin", { replace: true });
+      return;
+    }
 
     if (username === "adil" && password === "ameer") {
-      login();
+      login({ username, isAdmin: false });
       navigate("/", { replace: true });
-    } else {
-      // Optional: show an error or keep user on page
-      // For now, do nothing on invalid credentials
+      return;
     }
+    // Invalid credentials: no action for now
   };
 
   return <AuthCard onSubmit={handleSubmit} />;
