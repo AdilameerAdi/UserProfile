@@ -1,11 +1,13 @@
 import { useNavigate } from "react-router-dom";
 import { useContext } from "react";
 import { ThemeContext } from "../context/ThemeContext";
+import { useAuth } from "../signup/AuthContext";
 import logo from "../img/logo.png"; // 🔹 Import your logo image
 
 function Navbar() {
   const navigate = useNavigate();
   const { theme } = useContext(ThemeContext);
+  const { logout, isAdmin } = useAuth();
 
   return (
     <div
@@ -25,7 +27,7 @@ function Navbar() {
         />
       </div>
 
-      {/* Right Section (Coins + Sign Out) */}
+      {/* Right Section (Coins + Admin + Sign Out) */}
       <div className="flex items-center gap-4">
         {/* Coins + Add */}
         <div
@@ -50,8 +52,22 @@ function Navbar() {
           </button>
         </div>
 
+        {isAdmin && (
+          <button
+            onClick={() => navigate("/admin")}
+            className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg shadow-md text-sm sm:text-base transition duration-300"
+            style={{
+              background: theme.navbarSignOutBackground || "#3B82F6",
+              color: theme.navbarSignOutText || "#FFFFFF",
+            }}
+          >
+            Admin
+          </button>
+        )}
+
         {/* Sign Out */}
         <button
+          onClick={() => { logout(); navigate("/login"); }}
           className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg shadow-md text-sm sm:text-base transition duration-300"
           style={{
             background: theme.navbarSignOutBackground || "#EF4444",

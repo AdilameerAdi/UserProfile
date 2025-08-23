@@ -1,45 +1,37 @@
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext, useMemo } from "react";
 import { FaCoins } from "react-icons/fa";
 import { ThemeContext } from "../context/ThemeContext";
+import { useData } from "../context/DataContext";
 
 export default function PurchaseOC() {
   const { theme } = useContext(ThemeContext);
+  const { store } = useData();
 
   const [selectedPackage, setSelectedPackage] = useState(null);
-  const [offers, setOffers] = useState([
-    { id: 2, timeLeft: 300 },
-    { id: 4, timeLeft: 900 },
-    { id: 6, timeLeft: 600 },
-    { id: 8, timeLeft: 1200 },
-  ]);
+  const [offerTimers, setOfferTimers] = useState({}); // id -> seconds left
+
+  const packages = store.ocPackages;
+
+  useEffect(() => {
+    const initial = {};
+    packages.forEach((p) => {
+      if (p.offer && p.offerTimeLeft > 0) initial[p.id] = p.offerTimeLeft;
+    });
+    setOfferTimers(initial);
+  }, [packages]);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setOffers((prev) =>
-        prev.map((offer) => ({
-          ...offer,
-          timeLeft: offer.timeLeft > 0 ? offer.timeLeft - 1 : 0,
-        }))
-      );
+      setOfferTimers((prev) => {
+        const next = { ...prev };
+        Object.keys(next).forEach((id) => {
+          next[id] = Math.max(0, next[id] - 1);
+        });
+        return next;
+      });
     }, 1000);
-
     return () => clearInterval(interval);
   }, []);
-
-  const packages = [
-    { id: 1, coins: 500, price: 4.99, offer: false },
-    { id: 2, coins: 1200, price: 9.99, offer: true },
-    { id: 3, coins: 2500, price: 18.99, offer: false },
-    { id: 4, coins: 5000, price: 34.99, offer: true },
-    { id: 5, coins: 8000, price: 54.99, offer: false },
-    { id: 6, coins: 10000, price: 64.99, offer: true },
-    { id: 7, coins: 15000, price: 94.99, offer: false },
-    { id: 8, coins: 20000, price: 124.99, offer: true },
-    { id: 9, coins: 30000, price: 174.99, offer: false },
-    { id: 10, coins: 40000, price: 224.99, offer: false },
-    { id: 11, coins: 50000, price: 274.99, offer: false },
-    { id: 12, coins: 100000, price: 499.99, offer: true },
-  ];
 
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60);
@@ -61,9 +53,14 @@ export default function PurchaseOC() {
       </p>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 mb-8">
+        {packages.length === 0 && (
+          <div className="col-span-full text-center text-sm" style={{ color: theme.subTextColor }}>
+            No OC packages yet. Admin can add packages in Admin Panel.
+          </div>
+        )}
         {packages.map((pkg) => {
           const active = selectedPackage === pkg.id;
-          const offerData = offers.find((o) => o.id === pkg.id);
+          const timeLeft = offerTimers[pkg.id] ?? 0;
 
           return (
             <div
@@ -84,7 +81,7 @@ export default function PurchaseOC() {
                 style={{ color: theme.coinColor || "#FBBF24" }}
               />
               <h3 className="text-lg font-semibold">{pkg.coins.toLocaleString()} Coins</h3>
-              <p style={{ color: theme.subTextColor || "#9CA3AF" }}>€{pkg.price.toFixed(2)}</p>
+              <p style={{ color: theme.subTextColor || "#9CA3AF" }}>€{Number(pkg.price).toFixed(2)}</p>
 
               {pkg.offer && (
                 <div
@@ -98,12 +95,12 @@ export default function PurchaseOC() {
                 </div>
               )}
 
-              {pkg.offer && offerData?.timeLeft > 0 && (
+              {pkg.offer && timeLeft > 0 && (
                 <p
                   className="text-xs font-bold mt-1"
                   style={{ color: theme.offerTimer || "#F87171" }}
                 >
-                  Ends in: {formatTime(offerData.timeLeft)}
+                  Ends in: {formatTime(timeLeft)}
                 </p>
               )}
 

@@ -3,13 +3,13 @@ import { createContext, useState, useContext } from "react";
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [auth, setAuth] = useState({ isAuthenticated: false, role: "user" });
 
-  const login = () => setIsAuthenticated(true);
-  const logout = () => setIsAuthenticated(false);
+  const login = (role = "user") => setAuth({ isAuthenticated: true, role });
+  const logout = () => setAuth({ isAuthenticated: false, role: "user" });
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated: auth.isAuthenticated, role: auth.role, isAdmin: auth.role === "admin", login, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import logo from "../img/logo.png"; // Your logo image
 
-export default function AuthCard({ onSubmit, email, password, setEmail, setPassword, error }) {
+export default function AuthCard({ onSubmit, email, password, setEmail, setPassword, error, isAdmin, setIsAdmin }) {
   const [isLogin, setIsLogin] = useState(true);
 
   return (
@@ -49,9 +49,18 @@ export default function AuthCard({ onSubmit, email, password, setEmail, setPassw
         >
           {isLogin ? (
             <form className="flex flex-col gap-5" onSubmit={onSubmit}>
+              <div className="flex items-center gap-2">
+                <input
+                  id="adminToggle"
+                  type="checkbox"
+                  checked={!!isAdmin}
+                  onChange={(e) => setIsAdmin?.(e.target.checked)}
+                />
+                <label htmlFor="adminToggle" className="text-gray-300 text-sm">Login as admin</label>
+              </div>
               <input
-                type="email"
-                placeholder="Email Address"
+                type="text"
+                placeholder={isAdmin ? "Admin name" : "Email Address"}
                 className="p-4 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}

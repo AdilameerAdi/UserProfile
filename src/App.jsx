@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./signup/AuthContext";
 import ProtectedRoute from "./signup/ProtectedRoute";
 import Login from "./signup/Login";
@@ -22,6 +22,15 @@ import Settings from "./user design/Settings";
 import PurchaseOC from "./user design/PurchaseOC";
 import Shop from "./user design/Shop";
 import FortuneWheel from "./user design/FortuneWheel";
+import Admin from "./admin/Admin";
+
+import { useAuth } from "./signup/AuthContext";
+function AdminRoute({ children }) {
+  const { isAuthenticated, isAdmin } = useAuth();
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!isAdmin) return <Navigate to="/" replace />;
+  return children;
+}
 
 export default function App() {
   return (
@@ -30,6 +39,19 @@ export default function App() {
         <Routes>
           {/* Login page */}
           <Route path="/login" element={<Login />} />
+
+          {/* Admin route */}
+          <Route
+            path="/admin"
+            element={
+              <AdminRoute>
+                <Navbar />
+                <Layout>
+                  <Admin />
+                </Layout>
+              </AdminRoute>
+            }
+          />
 
           {/* Protected routes */}
           <Route
