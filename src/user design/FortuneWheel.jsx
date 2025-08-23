@@ -1,31 +1,27 @@
 import { useState, useContext } from "react";
 import { FaCoins } from "react-icons/fa";
 import { ThemeContext } from "../context/ThemeContext";
+import { useData } from "../context/DataContext";
 
 export default function FortuneWheel() {
   const { theme } = useContext(ThemeContext);
+  const { store } = useData();
 
   const [spinsLeft, setSpinsLeft] = useState(3);
   const [spinning, setSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
   const [selectedPrize, setSelectedPrize] = useState(null);
 
-  const prizes = [
-    { id: 1, name: "50 Coins", icon: <FaCoins />, color: "bg-yellow-500" },
-    { id: 2, name: "100 Coins", icon: <FaCoins />, color: "bg-orange-500" },
-    { id: 3, name: "200 Coins", icon: <FaCoins />, color: "bg-red-500" },
-    { id: 4, name: "1 Free Spin", icon: "🔄", color: "bg-green-500" },
-    { id: 5, name: "Small Gem Pack", icon: "💎", color: "bg-blue-500" },
-    { id: 6, name: "Epic Chest", icon: "🎁", color: "bg-purple-500" },
-    { id: 7, name: "Mega Pack", icon: "💰", color: "bg-pink-500" },
-    { id: 8, name: "Lucky Charm", icon: "🍀", color: "bg-teal-500" },
-    { id: 9, name: "Super Boost", icon: "⚡", color: "bg-indigo-500" },
-    { id: 10, name: "Mystery Box", icon: "❓", color: "bg-gray-500" },
-  ];
+  const prizes = store.wheelRewards;
 
   const spinWheel = () => {
     if (spinsLeft <= 0) {
       alert("No spins left! Please purchase more spins.");
+      return;
+    }
+
+    if (prizes.length === 0) {
+      alert("No rewards configured. Ask admin to add rewards.");
       return;
     }
 
@@ -67,9 +63,15 @@ export default function FortuneWheel() {
         Spin the wheel to win amazing prizes!
       </p>
 
+      {prizes.length === 0 && (
+        <div className="text-sm" style={{ color: theme.subTextColor }}>
+          No rewards yet. Admin can add rewards in Admin Panel.
+        </div>
+      )}
+
       {/* Remaining Spins */}
       <div className="mb-4 text-lg font-semibold">
-        Remaining Spins:{" "}
+        Remaining Spins: {" "}
         <span style={{ color: theme.highlightColor }}>{spinsLeft}</span>
       </div>
 

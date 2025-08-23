@@ -7,18 +7,27 @@ export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  // State for login inputs
-  const [email, setEmail] = useState("");
+  const [emailOrName, setEmailOrName] = useState("");
   const [password, setPassword] = useState("");
+  const [isAdmin, setIsAdmin] = useState(false);
   const [error, setError] = useState("");
 
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // Validate credentials
-    if (email === "adilameeradi@gmail.com" && password === "Adil") {
-      login(); // Call auth context login
-      navigate("/"); // Redirect to Home page
+    if (isAdmin) {
+      if (emailOrName === "Adil" && password === "Adil") {
+        login("admin");
+        navigate("/admin");
+      } else {
+        setError("Invalid admin credentials");
+      }
+      return;
+    }
+
+    if (emailOrName === "adilameeradi@gmail.com" && password === "Adil") {
+      login("user");
+      navigate("/");
     } else {
       setError("Invalid email or password");
     }
@@ -27,11 +36,13 @@ export default function Login() {
   return (
     <AuthCard
       onSubmit={handleSubmit}
-      email={email}
+      email={emailOrName}
       password={password}
-      setEmail={setEmail}
+      setEmail={setEmailOrName}
       setPassword={setPassword}
       error={error}
+      isAdmin={isAdmin}
+      setIsAdmin={setIsAdmin}
     />
   );
 }
