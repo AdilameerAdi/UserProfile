@@ -5,8 +5,8 @@ const STORAGE_KEY = "appDataStore_v1";
 const defaultData = {
   characters: [], // { id, name, imageUrl }
   ocPackages: [], // { id, coins, price, offer, offerTimeLeft }
-  shopItems: [], // { id, name, price, color, offer, offerTimeLeft, icon }
-  wheelRewards: [], // { id, name, color, icon }
+  shopItems: [], // { id, name, price, color, offer, offerTimeLeft, icon, iconUrl }
+  wheelRewards: [], // { id, name, color, icon, iconUrl }
 };
 
 const DataContext = createContext();
@@ -38,6 +38,15 @@ export function DataProvider({ children }) {
       ],
     }));
   };
+  const updateCharacter = (id, updates) => {
+    setStore((prev) => ({
+      ...prev,
+      characters: prev.characters.map((c) => (c.id === id ? { ...c, ...updates } : c)),
+    }));
+  };
+  const deleteCharacter = (id) => {
+    setStore((prev) => ({ ...prev, characters: prev.characters.filter((c) => c.id !== id) }));
+  };
 
   const addOcPackage = (pkg) => {
     setStore((prev) => ({
@@ -54,6 +63,15 @@ export function DataProvider({ children }) {
       ],
     }));
   };
+  const updateOcPackage = (id, updates) => {
+    setStore((prev) => ({
+      ...prev,
+      ocPackages: prev.ocPackages.map((p) => (p.id === id ? { ...p, ...updates } : p)),
+    }));
+  };
+  const deleteOcPackage = (id) => {
+    setStore((prev) => ({ ...prev, ocPackages: prev.ocPackages.filter((p) => p.id !== id) }));
+  };
 
   const addShopItem = (item) => {
     setStore((prev) => ({
@@ -67,10 +85,20 @@ export function DataProvider({ children }) {
           color: item.color || "bg-gray-500",
           offer: Boolean(item.offer) || false,
           offerTimeLeft: Number(item.offerTimeLeft) || 0,
-          icon: item.icon || "🛒",
+          icon: item.icon || "",
+          iconUrl: item.iconUrl || "",
         },
       ],
     }));
+  };
+  const updateShopItem = (id, updates) => {
+    setStore((prev) => ({
+      ...prev,
+      shopItems: prev.shopItems.map((s) => (s.id === id ? { ...s, ...updates } : s)),
+    }));
+  };
+  const deleteShopItem = (id) => {
+    setStore((prev) => ({ ...prev, shopItems: prev.shopItems.filter((s) => s.id !== id) }));
   };
 
   const addWheelReward = (reward) => {
@@ -82,19 +110,37 @@ export function DataProvider({ children }) {
           id: crypto.randomUUID(),
           name: reward.name || "Reward",
           color: reward.color || "bg-blue-500",
-          icon: reward.icon || "🎁",
+          icon: reward.icon || "",
+          iconUrl: reward.iconUrl || "",
         },
       ],
     }));
+  };
+  const updateWheelReward = (id, updates) => {
+    setStore((prev) => ({
+      ...prev,
+      wheelRewards: prev.wheelRewards.map((w) => (w.id === id ? { ...w, ...updates } : w)),
+    }));
+  };
+  const deleteWheelReward = (id) => {
+    setStore((prev) => ({ ...prev, wheelRewards: prev.wheelRewards.filter((w) => w.id !== id) }));
   };
 
   const value = useMemo(
     () => ({
       store,
       addCharacter,
+      updateCharacter,
+      deleteCharacter,
       addOcPackage,
+      updateOcPackage,
+      deleteOcPackage,
       addShopItem,
+      updateShopItem,
+      deleteShopItem,
       addWheelReward,
+      updateWheelReward,
+      deleteWheelReward,
     }),
     [store]
   );

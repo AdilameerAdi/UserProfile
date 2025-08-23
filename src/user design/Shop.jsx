@@ -68,9 +68,9 @@ export default function Shop() {
             >
               {/* Icon inside colored circle */}
               <div
-                className={`w-12 h-12 flex items-center justify-center rounded-full ${item.color} text-white mb-2 text-xl`}
+                className={`w-12 h-12 flex items-center justify-center rounded-full ${item.color} text-white mb-2 text-xl overflow-hidden`}
               >
-                {typeof item.icon === "string" ? item.icon : <span>🛒</span>}
+                {item.iconUrl ? <img src={item.iconUrl} className="w-full h-full object-cover" /> : (typeof item.icon === "string" && item.icon ? item.icon : <span>🛒</span>)}
               </div>
 
               {/* Item Name */}

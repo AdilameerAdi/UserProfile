@@ -106,7 +106,13 @@ export default function FortuneWheel() {
                       transform: `rotate(${angle + 360 / prizes.length / 2}deg) translate(9rem) rotate(90deg)`,
                     }}
                   >
-                    <div className="text-xl">{prize.icon}</div>
+                    <div className="text-xl">
+                      {prize.iconUrl ? (
+                        <img src={prize.iconUrl} className="w-6 h-6 object-cover inline-block rounded" />
+                      ) : (
+                        prize.icon || "🎁"
+                      )}
+                    </div>
                     <div className="text-xs">{prize.name}</div>
                   </div>
                 </div>
@@ -138,7 +144,13 @@ export default function FortuneWheel() {
           <ul className="space-y-2" style={{ color: theme.textColor }}>
             {prizes.map((p) => (
               <li key={p.id} className="flex items-center gap-2">
-                <span>{p.icon}</span> {p.name}
+                <span>
+                  {p.iconUrl ? (
+                    <img src={p.iconUrl} className="w-4 h-4 object-cover inline-block rounded" />
+                  ) : (
+                    p.icon || "🎁"
+                  )}
+                </span> {p.name}
               </li>
             ))}
           </ul>

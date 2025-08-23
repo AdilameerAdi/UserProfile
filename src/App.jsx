@@ -40,20 +40,17 @@ export default function App() {
           {/* Login page */}
           <Route path="/login" element={<Login />} />
 
-          {/* Admin route */}
+          {/* Admin route - distinct layout */}
           <Route
             path="/admin"
             element={
               <AdminRoute>
-                <Navbar />
-                <Layout>
-                  <Admin />
-                </Layout>
+                <Admin />
               </AdminRoute>
             }
           />
 
-          {/* Protected routes */}
+          {/* Protected routes (user layout) */}
           <Route
             path="/*"
             element={

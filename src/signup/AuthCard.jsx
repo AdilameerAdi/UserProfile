@@ -1,9 +1,7 @@
 import { useState } from "react";
 import logo from "../img/logo.png"; // Your logo image
 
-export default function AuthCard({ onSubmit, email, password, setEmail, setPassword, error, isAdmin, setIsAdmin }) {
-  const [isLogin, setIsLogin] = useState(true);
-
+export default function AuthCard({ onSubmit, email, password, setEmail, setPassword, error, isAdmin, setIsAdmin, isLoginView, setIsLoginView, regName, setRegName, regEmail, setRegEmail, regPassword, setRegPassword }) {
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black px-4">
       <div className="bg-gray-900 w-full max-w-5xl rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row transition-all duration-500 border border-gray-700">
@@ -11,7 +9,7 @@ export default function AuthCard({ onSubmit, email, password, setEmail, setPassw
         {/* Left Section (Logo + Intro) */}
         <div
           className={`w-full md:w-1/2 flex flex-col justify-center items-center text-center p-10 transition-all duration-500 ${
-            isLogin ? "order-1" : "order-2"
+            isLoginView ? "order-1" : "order-2"
           }`}
         >
           {/* Game Logo */}
@@ -24,18 +22,18 @@ export default function AuthCard({ onSubmit, email, password, setEmail, setPassw
           </div>
 
           <h2 className="text-4xl font-extrabold text-white mb-4 leading-tight">
-            {isLogin ? "Welcome Back to Dionisy!" : "Join the Game of Dionisy!"}
+            {isLoginView ? "Welcome Back to Dionisy!" : "Join the Game of Dionisy!"}
           </h2>
           <p className="text-gray-400 mb-6 text-lg max-w-md">
-            {isLogin
+            {isLoginView
               ? "Sign in and continue your epic journey in the world of Dionisy."
               : "Create your account and become a legend in the ultimate gaming experience."}
           </p>
           <button
-            onClick={() => setIsLogin(!isLogin)}
+            onClick={() => setIsLoginView(!isLoginView)}
             className="text-blue-400 hover:underline font-semibold text-lg"
           >
-            {isLogin
+            {isLoginView
               ? "New player? Create an Account"
               : "Already have an account? Sign In"}
           </button>
@@ -44,10 +42,10 @@ export default function AuthCard({ onSubmit, email, password, setEmail, setPassw
         {/* Right Section (Form) */}
         <div
           className={`w-full md:w-1/2 bg-gray-800 p-10 flex flex-col justify-center transition-all duration-500 ${
-            isLogin ? "order-2" : "order-1"
+            isLoginView ? "order-2" : "order-1"
           }`}
         >
-          {isLogin ? (
+          {isLoginView ? (
             <form className="flex flex-col gap-5" onSubmit={onSubmit}>
               <div className="flex items-center gap-2">
                 <input
@@ -88,22 +86,27 @@ export default function AuthCard({ onSubmit, email, password, setEmail, setPassw
                 type="text"
                 placeholder="Full Name"
                 className="p-4 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-gray-400"
+                value={regName}
+                onChange={(e) => setRegName?.(e.target.value)}
+                required
               />
               <input
                 type="email"
                 placeholder="Email Address"
                 className="p-4 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-gray-400"
+                value={regEmail}
+                onChange={(e) => setRegEmail?.(e.target.value)}
+                required
               />
               <input
                 type="password"
                 placeholder="Password"
                 className="p-4 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-gray-400"
+                value={regPassword}
+                onChange={(e) => setRegPassword?.(e.target.value)}
+                required
               />
-              <input
-                type="password"
-                placeholder="Confirm Password"
-                className="p-4 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-gray-400"
-              />
+              {error && <p className="text-red-500 text-sm">{error}</p>}
               <button
                 type="submit"
                 className="bg-green-600 text-white py-4 rounded-lg font-semibold text-lg hover:bg-green-700 transition duration-300 shadow-md"
