@@ -4,38 +4,51 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 export default function Login() {
-  const { login } = useAuth();
+  const { loginCredentials, register } = useAuth();
   const navigate = useNavigate();
 
+  // login state
   const [emailOrName, setEmailOrName] = useState("");
   const [password, setPassword] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
   const [error, setError] = useState("");
 
+  // signup state
+  const [name, setName] = useState("");
+  const [signupEmail, setSignupEmail] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [signupError, setSignupError] = useState("");
+
   const handleSubmit = (e) => {
     e.preventDefault();
+    const res = loginCredentials({ emailOrName, password, isAdmin });
+    if (res.ok) {
+      navigate(isAdmin ? "/admin" : "/");
+    } else {
+      setError(res.error || "Login failed");
+    }
+  };
 
-    if (isAdmin) {
-      if (emailOrName === "Adil" && password === "Adil") {
-        login("admin");
-        navigate("/admin");
-      } else {
-        setError("Invalid admin credentials");
-      }
+  const handleSignup = (e) => {
+    e.preventDefault();
+    setSignupError("");
+    if (signupPassword !== confirmPassword) {
+      setSignupError("Passwords do not match");
       return;
     }
-
-    if (emailOrName === "adilameeradi@gmail.com" && password === "Adil") {
-      login("user");
+    const res = register({ name, email: signupEmail, password: signupPassword });
+    if (res.ok) {
       navigate("/");
     } else {
-      setError("Invalid email or password");
+      setSignupError(res.error || "Registration failed");
     }
   };
 
   return (
     <AuthCard
       onSubmit={handleSubmit}
+      onSignup={handleSignup}
       email={emailOrName}
       password={password}
       setEmail={setEmailOrName}
@@ -43,6 +56,15 @@ export default function Login() {
       error={error}
       isAdmin={isAdmin}
       setIsAdmin={setIsAdmin}
+      signupName={name}
+      setSignupName={setName}
+      signupEmail={signupEmail}
+      setSignupEmail={setSignupEmail}
+      signupPassword={signupPassword}
+      setSignupPassword={setSignupPassword}
+      confirmPassword={confirmPassword}
+      setConfirmPassword={setConfirmPassword}
+      signupError={signupError}
     />
   );
 }

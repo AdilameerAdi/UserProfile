@@ -1,7 +1,26 @@
 import { useState } from "react";
 import logo from "../img/logo.png"; // Your logo image
 
-export default function AuthCard({ onSubmit, email, password, setEmail, setPassword, error, isAdmin, setIsAdmin }) {
+export default function AuthCard({
+  onSubmit,
+  onSignup,
+  email,
+  password,
+  setEmail,
+  setPassword,
+  error,
+  isAdmin,
+  setIsAdmin,
+  signupName,
+  setSignupName,
+  signupEmail,
+  setSignupEmail,
+  signupPassword,
+  setSignupPassword,
+  confirmPassword,
+  setConfirmPassword,
+  signupError,
+}) {
   const [isLogin, setIsLogin] = useState(true);
 
   return (
@@ -60,7 +79,7 @@ export default function AuthCard({ onSubmit, email, password, setEmail, setPassw
               </div>
               <input
                 type="text"
-                placeholder={isAdmin ? "Admin name" : "Email Address"}
+                placeholder={isAdmin ? "Admin name" : "Email Address or Name"}
                 className="p-4 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -83,27 +102,40 @@ export default function AuthCard({ onSubmit, email, password, setEmail, setPassw
               </button>
             </form>
           ) : (
-            <form className="flex flex-col gap-5" onSubmit={onSubmit}>
+            <form className="flex flex-col gap-5" onSubmit={onSignup}>
               <input
                 type="text"
                 placeholder="Full Name"
                 className="p-4 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-gray-400"
+                value={signupName}
+                onChange={(e) => setSignupName?.(e.target.value)}
+                required
               />
               <input
                 type="email"
                 placeholder="Email Address"
                 className="p-4 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-gray-400"
+                value={signupEmail}
+                onChange={(e) => setSignupEmail?.(e.target.value)}
+                required
               />
               <input
                 type="password"
                 placeholder="Password"
                 className="p-4 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-gray-400"
+                value={signupPassword}
+                onChange={(e) => setSignupPassword?.(e.target.value)}
+                required
               />
               <input
                 type="password"
                 placeholder="Confirm Password"
                 className="p-4 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-gray-400"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword?.(e.target.value)}
+                required
               />
+              {signupError && <p className="text-red-500 text-sm">{signupError}</p>}
               <button
                 type="submit"
                 className="bg-green-600 text-white py-4 rounded-lg font-semibold text-lg hover:bg-green-700 transition duration-300 shadow-md"
