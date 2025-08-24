@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { FaEdit, FaImage } from "react-icons/fa";
+import { useAuth } from "../signup/AuthContext";
 
 // Import sample photos
 import photo1 from "./profile photo/1.png";
@@ -19,12 +20,15 @@ import photo15 from "./profile photo/15.png";
 import photo16 from "./profile photo/16.png";
 
 export default function Home() {
+  const { currentUser, updateProfileName } = useAuth();
   const [userName, setUserName] = useState("John Doe");
-  const [email] = useState("john.doe@example.com"); // Read-only email
+  const [email, setEmail] = useState("john.doe@example.com");
   const [isEditingName, setIsEditingName] = useState(false);
   const [profilePhoto, setProfilePhoto] = useState(null);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
+  const [savingName, setSavingName] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   const photos = [
     photo1, photo2, photo3, photo4,
@@ -33,14 +37,35 @@ export default function Home() {
     photo13, photo14, photo15, photo16
   ];
 
+  // Sync from auth user
+  useEffect(() => {
+    if (currentUser) {
+      setUserName(currentUser.name || "User");
+      setEmail(currentUser.email || "");
+    }
+  }, [currentUser]);
+
   // Pick a random avatar initially
   useEffect(() => {
     const randomPhoto = photos[Math.floor(Math.random() * photos.length)];
     setProfilePhoto(randomPhoto);
   }, []);
 
-  const handleSaveName = () => {
+  const handleSaveName = async () => {
+    setSavingName(true);
+    setSaveError("");
+    const trimmed = (userName || "").trim();
+    if (!trimmed) {
+      setSaveError("Name cannot be empty");
+      setSavingName(false);
+      return;
+    }
+    const res = await updateProfileName(trimmed);
+    if (!res.ok) {
+      setSaveError(res.error || "Failed to save name");
+    }
     setIsEditingName(false);
+    setSavingName(false);
   };
 
   const handleSelectPhoto = (photo) => {
@@ -87,6 +112,7 @@ export default function Home() {
               <h2 className="text-xl font-semibold">{userName}</h2>
             )}
             <p className="text-gray-500">{email}</p>
+            {saveError && <p className="text-red-600 text-sm mt-2">{saveError}</p>}
           </div>
 
           {/* Action Buttons */}
@@ -94,9 +120,10 @@ export default function Home() {
             {isEditingName ? (
               <button
                 onClick={handleSaveName}
-                className="px-5 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
+                disabled={savingName}
+                className="px-5 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-60"
               >
-                Save Name
+                {savingName ? "Saving..." : "Save Name"}
               </button>
             ) : (
               <button

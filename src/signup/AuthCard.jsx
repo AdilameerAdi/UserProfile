@@ -45,7 +45,7 @@ export default function AuthCard({
           <form className="w-full flex flex-col gap-4" onSubmit={onSubmit}>
             <input
               type="text"
-              placeholder={isAdmin ? "Admin name" : "Email or Username"}
+              placeholder={isAdmin ? "Admin name" : "Email"}
               className="p-3 rounded-lg bg-[#364153] text-white focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
