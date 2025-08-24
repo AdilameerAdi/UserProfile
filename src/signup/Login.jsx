@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 export default function Login() {
-  const { loginCredentials, register } = useAuth();
+  const { loginCredentials, register, isAdmin: isAdminRole } = useAuth();
   const navigate = useNavigate();
 
   // login state
@@ -25,7 +25,7 @@ export default function Login() {
     setError("");
     const res = await loginCredentials({ emailOrName, password, isAdmin });
     if (res.ok) {
-      navigate(isAdmin ? "/admin" : "/");
+      navigate(isAdminRole ? "/admin" : "/");
     } else {
       setError(res.error || "Login failed");
     }
