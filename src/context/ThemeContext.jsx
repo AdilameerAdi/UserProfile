@@ -23,6 +23,15 @@ const themes = {
     tooltipText: "#ffffff",
     dropdownBg: "#1f2937",
     borderColor: "#d1d5db",
+    // High-contrast navbar tokens
+    navbarBackground: "linear-gradient(to right, #111827, #1E3A8A)",
+    navbarTextColor: "#E5E7EB",
+    navbarCoinBackground: "#1F2937",
+    navbarCoinText: "#60A5FA",
+    navbarCoinButtonBackground: "#3B82F6",
+    navbarCoinButtonText: "#FFFFFF",
+    navbarSignOutBackground: "#EF4444",
+    navbarSignOutText: "#FFFFFF",
   },
   dark: {
     background: "#0f172a",
@@ -44,6 +53,15 @@ const themes = {
     tooltipText: "#ffffff",
     dropdownBg: "#1f2937",
     borderColor: "#374151",
+    // High-contrast navbar tokens
+    navbarBackground: "linear-gradient(to right, #0b1020, #1E3A8A)",
+    navbarTextColor: "#E5E7EB",
+    navbarCoinBackground: "#111827",
+    navbarCoinText: "#93C5FD",
+    navbarCoinButtonBackground: "#3B82F6",
+    navbarCoinButtonText: "#FFFFFF",
+    navbarSignOutBackground: "#EF4444",
+    navbarSignOutText: "#FFFFFF",
   },
   purple: {
     background: "#1e1b2f",
@@ -65,6 +83,15 @@ const themes = {
     tooltipText: "#e0d7f5",
     dropdownBg: "#2d2653",
     borderColor: "#5c4d99",
+    // High-contrast navbar tokens
+    navbarBackground: "linear-gradient(to right, #221a38, #5b21b6)",
+    navbarTextColor: "#F3E8FF",
+    navbarCoinBackground: "#2d2653",
+    navbarCoinText: "#C4B5FD",
+    navbarCoinButtonBackground: "#8B5CF6",
+    navbarCoinButtonText: "#FFFFFF",
+    navbarSignOutBackground: "#EF4444",
+    navbarSignOutText: "#FFFFFF",
   },
 };
 

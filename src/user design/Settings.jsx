@@ -49,6 +49,10 @@ export default function Settings() {
                 activeTab === tab
                   ? getBg("activeTabBorder")
                   : getBg("inactiveTabBorder"),
+              color:
+                activeTab === tab
+                  ? getBg("buttonText")
+                  : getBg("text"),
             }}
           >
             <h3 className="capitalize">{tab}</h3>
@@ -118,35 +122,33 @@ export default function Settings() {
                   <input
                     type="email"
                     placeholder="Enter new email"
-                    className="w-full px-4 py-2 mb-4 rounded-lg transition-colors duration-300"
+                    className="w-full px-4 py-2 rounded-lg"
                     style={{
-                      backgroundColor: getBg("background"),
+                      backgroundColor: getBg("inputBg"),
                       borderColor: getBg("inputBorder"),
-                      color: getBg("text"),
+                      color: getBg("inputText"),
                     }}
                   />
                   <button
-                    className="w-full sm:w-auto px-4 py-2 rounded-lg transition-colors duration-300"
+                    className="mt-4 px-4 py-2 rounded-lg"
                     style={{
                       backgroundColor: getBg("primary"),
                       color: getBg("buttonText"),
                     }}
                   >
-                    Update Email
+                    Save Email
                   </button>
                 </div>
               )}
             </div>
 
             {/* Change Password */}
-            <div>
+            <div className="mb-6">
               <button
                 onClick={() => setShowPasswordForm(!showPasswordForm)}
                 style={{ color: getBg("primary") }}
               >
-                {showPasswordForm
-                  ? "Cancel Password Change"
-                  : "Change Password?"}
+                {showPasswordForm ? "Cancel Password Change" : "Change Password?"}
               </button>
               {showPasswordForm && (
                 <div
@@ -159,35 +161,42 @@ export default function Settings() {
                   <input
                     type="password"
                     placeholder="Enter new password"
-                    className="w-full px-4 py-2 mb-4 rounded-lg transition-colors duration-300"
+                    className="w-full px-4 py-2 rounded-lg"
                     style={{
-                      backgroundColor: getBg("background"),
+                      backgroundColor: getBg("inputBg"),
                       borderColor: getBg("inputBorder"),
-                      color: getBg("text"),
-                    }}
-                  />
-                  <label className="block mb-2" style={{ color: getBg("subText") }}>
-                    Confirm New Password:
-                  </label>
-                  <input
-                    type="password"
-                    placeholder="Confirm new password"
-                    className="w-full px-4 py-2 mb-4 rounded-lg transition-colors duration-300"
-                    style={{
-                      backgroundColor: getBg("background"),
-                      borderColor: getBg("inputBorder"),
-                      color: getBg("text"),
+                      color: getBg("inputText"),
                     }}
                   />
                   <button
-                    className="w-full sm:w-auto px-4 py-2 rounded-lg transition-colors duration-300"
+                    className="mt-4 px-4 py-2 rounded-lg"
                     style={{
                       backgroundColor: getBg("primary"),
                       color: getBg("buttonText"),
                     }}
                   >
-                    Update Password
+                    Save Password
                   </button>
+                </div>
+              )}
+            </div>
+
+            {/* Recovery Options */}
+            <div className="mb-6">
+              <button
+                onClick={() => setShowRecoveryForm(!showRecoveryForm)}
+                style={{ color: getBg("primary") }}
+              >
+                {showRecoveryForm ? "Hide Recovery Options" : "Recovery Options"}
+              </button>
+              {showRecoveryForm && (
+                <div
+                  className="mt-4 p-4 sm:p-6 rounded-lg transition-all duration-300"
+                  style={{ backgroundColor: getBg("inputBg") }}
+                >
+                  <p style={{ color: getBg("subText") }}>
+                    Add recovery methods to secure your account.
+                  </p>
                 </div>
               )}
             </div>
@@ -196,65 +205,65 @@ export default function Settings() {
 
         {/* Appearance Tab */}
         {activeTab === "appearance" && (
-  <div>
-    <h2 className="text-2xl sm:text-3xl font-bold mb-6">Appearance Settings</h2>
-    <p style={{ color: getBg("subText") }} className="mb-4">
-      Choose a theme for the whole application:
-    </p>
-
-    <div className="flex gap-4 flex-wrap">
-      {["light", "dark", "purple"].map((t) => (
-        <button
-          key={t}
-          onClick={() => switchTheme(t)}
-          className="px-6 py-2 rounded-lg font-semibold transition-all duration-300 shadow-md"
-          style={{
-            backgroundColor: theme.primary,
-            color: theme.buttonText,
-            border:
-              currentThemeName === t ? `3px solid ${theme.activeTabBg}` : `1px solid ${theme.borderColor}`,
-          }}
-        >
-          {t.charAt(0).toUpperCase() + t.slice(1)}
-        </button>
-      ))}
-    </div>
-  </div>
-)}
-
-        {/* Security Tab */}
-        {activeTab === "security" && (
           <div>
-            <h2 className="text-2xl sm:text-3xl font-bold mb-6">Security Settings</h2>
-            <p style={{ color: getBg("subText") }}>
-              Other security options (2FA, login alerts, etc.) can go here...
-            </p>
+            <h2 className="text-2xl sm:text-3xl font-bold mb-6">Appearance</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {["light", "dark", "purple"].map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => switchTheme(mode)}
+                  className="p-4 rounded-lg border transition-all duration-300"
+                  style={{
+                    backgroundColor:
+                      currentThemeName === mode
+                        ? getBg("activeTabBg")
+                        : getBg("inactiveTabBg"),
+                    borderColor:
+                      currentThemeName === mode
+                        ? getBg("activeTabBorder")
+                        : getBg("inactiveTabBorder"),
+                    color:
+                      currentThemeName === mode
+                        ? getBg("buttonText")
+                        : getBg("text"),
+                  }}
+                >
+                  <span className="capitalize">{mode}</span>
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
-        {/* Connections Tab */}
+        {/* Security & Connections placeholders remain unchanged for brevity */}
+        {activeTab === "security" && (
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-bold mb-6">Security</h2>
+            <p style={{ color: getBg("subText") }}>Password, 2FA, and more.</p>
+          </div>
+        )}
+
         {activeTab === "connections" && (
           <div>
             <h2 className="text-2xl sm:text-3xl font-bold mb-6">Connections</h2>
-            {["discord", "steam", "google"].map((platform) => (
-              <div key={platform} className="mb-4 flex items-center justify-between">
-                <span style={{ color: getBg("subText") }} className="capitalize">
-                  {platform}
-                </span>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {["discord", "steam", "google"].map((conn) => (
                 <button
-                  onClick={() => toggleConnection(platform)}
-                  className="px-4 py-2 rounded-lg transition-all duration-300"
+                  key={conn}
+                  onClick={() => toggleConnection(conn)}
+                  className="p-4 rounded-lg border transition-all duration-300"
                   style={{
-                    backgroundColor: connections[platform]
-                      ? getBg("disconnectButton")
-                      : getBg("connectButton"),
-                    color: getBg("buttonText"),
+                    backgroundColor: connections[conn]
+                      ? getBg("connectButton")
+                      : getBg("inactiveTabBg"),
+                    borderColor: getBg("inactiveTabBorder"),
+                    color: connections[conn] ? getBg("buttonText") : getBg("text"),
                   }}
                 >
-                  {connections[platform] ? "Disconnect" : "Connect"}
+                  <span className="capitalize">{conn}</span>
                 </button>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )}
       </div>
