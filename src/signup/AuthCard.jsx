@@ -46,7 +46,7 @@ export default function AuthCard({
             <input
               type="text"
               placeholder={isAdmin ? "Admin name" : "Email or Username"}
-              className="p-3 rounded-lg bg-[#1E2939] text-white focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400"
+              className="p-3 rounded-lg bg-[#364153] text-white focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
