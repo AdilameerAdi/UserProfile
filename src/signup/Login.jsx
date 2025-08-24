@@ -20,9 +20,10 @@ export default function Login() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [signupError, setSignupError] = useState("");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const res = loginCredentials({ emailOrName, password, isAdmin });
+    setError("");
+    const res = await loginCredentials({ emailOrName, password, isAdmin });
     if (res.ok) {
       navigate(isAdmin ? "/admin" : "/");
     } else {
@@ -30,14 +31,14 @@ export default function Login() {
     }
   };
 
-  const handleSignup = (e) => {
+  const handleSignup = async (e) => {
     e.preventDefault();
     setSignupError("");
     if (signupPassword !== confirmPassword) {
       setSignupError("Passwords do not match");
       return;
     }
-    const res = register({ name, email: signupEmail, password: signupPassword });
+    const res = await register({ name, email: signupEmail, password: signupPassword });
     if (res.ok) {
       navigate("/");
     } else {
