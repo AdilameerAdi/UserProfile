@@ -83,6 +83,8 @@ export function AuthProvider({ children }) {
 	};
 
 	const loginCredentials = async ({ emailOrName, password, isAdmin = false }) => {
+		console.log("Login attempt:", { emailOrName, isAdmin });
+		
 		if (isAdmin) {
 			// Fallback admin login (legacy). Prefer using profile.is_admin for real admin accounts.
 			if (emailOrName === "Adil" && password === "Adil") {
@@ -97,63 +99,125 @@ export function AuthProvider({ children }) {
 			// Fall through to standard login if legacy creds not used
 		}
 
-		const { data, error } = await supabase.auth.signInWithPassword({ email: emailOrName, password });
-		if (error) return { ok: false, error: error.message || "Invalid email or password" };
+		try {
+			// For now, assume emailOrName is always an email for regular users
+			// TODO: Add logic to check if it's email or username and query accordingly
+			const { data, error } = await supabase.auth.signInWithPassword({ 
+				email: emailOrName, 
+				password: password 
+			});
+			
+			if (error) {
+				console.error("Login error:", error);
+				return { ok: false, error: error.message || "Invalid email or password" };
+			}
 
-		const user = data?.user;
-		if (!user) return { ok: false, error: "Login failed" };
+			console.log("Login successful:", data);
+			
+			const user = data?.user;
+			if (!user) return { ok: false, error: "Login failed" };
 
-		const profile = await fetchUserProfile(user.id);
-		setAuthState({
-			isAuthenticated: true,
-			role: profile?.is_admin ? "admin" : "user",
-			currentUser: {
-				id: user.id,
-				name: profile?.full_name || user.user_metadata?.name || user.email?.split("@")[0] || "User",
-				email: user.email || "",
-				role: profile?.is_admin ? "admin" : "user",
-			},
-			isLoading: false,
-		});
-		return { ok: true };
-	};
-
-	const register = async ({ name, email, password }) => {
-		if (!name || !email || !password) {
-			return { ok: false, error: "All fields are required" };
-		}
-		const { data, error } = await supabase.auth.signUp({ email, password });
-		if (error) return { ok: false, error: error.message };
-
-		let user = data?.user || null;
-
-		// Create or update profile with name (do not include email column as it may not exist in schema)
-		if (user) {
-			await supabase.from("profiles").upsert({ id: user.id, full_name: name });
-		}
-
-		// If no session (e.g., email confirm required), try to sign in directly for dev
-		if (!data?.session) {
-			const { data: signInData } = await supabase.auth.signInWithPassword({ email, password });
-			user = signInData?.user || user;
-		}
-
-		if (user) {
 			const profile = await fetchUserProfile(user.id);
 			setAuthState({
 				isAuthenticated: true,
 				role: profile?.is_admin ? "admin" : "user",
 				currentUser: {
 					id: user.id,
-					name: profile?.full_name || name,
-					email: user.email || email,
+					name: profile?.full_name || user.user_metadata?.name || user.email?.split("@")[0] || "User",
+					email: user.email || "",
 					role: profile?.is_admin ? "admin" : "user",
 				},
 				isLoading: false,
 			});
+			return { ok: true };
+		} catch (err) {
+			console.error("Login exception:", err);
+			return { ok: false, error: "Login failed. Please check your credentials." };
 		}
+	};
 
-		return { ok: true };
+	const register = async ({ name, email, password }) => {
+		if (!name || !email || !password) {
+			return { ok: false, error: "All fields are required" };
+		}
+		
+		console.log("Attempting to register user:", { name, email });
+		
+		try {
+			// Sign up the user
+			const { data, error } = await supabase.auth.signUp({ 
+				email, 
+				password,
+				options: {
+					data: {
+						full_name: name,
+					}
+				}
+			});
+			
+			if (error) {
+				console.error("Signup error:", error);
+				return { ok: false, error: error.message };
+			}
+			
+			console.log("Signup response:", data);
+			
+			let user = data?.user || null;
+			
+			// Create or update profile with name
+			if (user) {
+				console.log("Creating profile for user:", user.id);
+				const { error: profileError } = await supabase
+					.from("profiles")
+					.upsert({ 
+						id: user.id, 
+						full_name: name 
+					});
+				
+				if (profileError) {
+					console.error("Profile creation error:", profileError);
+				} else {
+					console.log("Profile created successfully");
+				}
+			}
+			
+			// If no session (e.g., email confirm required), try to sign in directly
+			if (!data?.session && user) {
+				console.log("No session returned, attempting direct sign in");
+				const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ 
+					email, 
+					password 
+				});
+				
+				if (signInError) {
+					console.error("Auto sign-in error:", signInError);
+				} else {
+					user = signInData?.user || user;
+					console.log("Auto sign-in successful");
+				}
+			}
+			
+			if (user) {
+				const profile = await fetchUserProfile(user.id);
+				setAuthState({
+					isAuthenticated: true,
+					role: profile?.is_admin ? "admin" : "user",
+					currentUser: {
+						id: user.id,
+						name: profile?.full_name || name,
+						email: user.email || email,
+						role: profile?.is_admin ? "admin" : "user",
+					},
+					isLoading: false,
+				});
+				console.log("User registered and authenticated successfully");
+			}
+			
+			return { ok: true };
+		} catch (err) {
+			console.error("Registration error:", err);
+			return { ok: false, error: "Registration failed. Please try again." };
+		}
 	};
 
 	const updateProfileName = async (newName) => {
