@@ -1,4 +1,4 @@
-import { useState, useContext } from "react";
+import { useState, useContext, useEffect } from "react";
 import { ThemeContext } from "../context/ThemeContext";
 
 export default function Settings() {
@@ -14,6 +14,19 @@ export default function Settings() {
     steam: false,
     google: false,
   });
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("appThemeName_v1");
+      if (saved) switchTheme(saved);
+    } catch (_) {}
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("appThemeName_v1", currentThemeName);
+    } catch (_) {}
+  }, [currentThemeName]);
 
   const toggleConnection = (platform) => {
     setConnections((prev) => ({
@@ -76,7 +89,7 @@ export default function Settings() {
                 type="text"
                 value="user@example.com"
                 disabled
-                className="w-full px-4 py-2 rounded-lg text-sm sm:text-base transition-colors duration-300"
+                className="w-full px-4 py-2 rounded-lg text-sm sm:text-base transition-colors duration-300 border"
                 style={{
                   backgroundColor: getBg("inputBg"),
                   borderColor: getBg("inputBorder"),
@@ -90,7 +103,7 @@ export default function Settings() {
                 type="password"
                 value="********"
                 disabled
-                className="w-full px-4 py-2 rounded-lg text-sm sm:text-base transition-colors duration-300"
+                className="w-full px-4 py-2 rounded-lg text-sm sm:text-base transition-colors duration-300 border"
                 style={{
                   backgroundColor: getBg("inputBg"),
                   borderColor: getBg("inputBorder"),
@@ -109,8 +122,8 @@ export default function Settings() {
               </button>
               {showEmailForm && (
                 <div
-                  className="mt-4 p-4 sm:p-6 rounded-lg transition-all duration-300"
-                  style={{ backgroundColor: getBg("inputBg") }}
+                  className="mt-4 p-4 sm:p-6 rounded-lg transition-all duration-300 border"
+                  style={{ backgroundColor: getBg("inputBg"), borderColor: getBg("inputBorder") }}
                 >
                   <label className="block mb-2" style={{ color: getBg("subText") }}>
                     New Email:
@@ -118,7 +131,7 @@ export default function Settings() {
                   <input
                     type="email"
                     placeholder="Enter new email"
-                    className="w-full px-4 py-2 mb-4 rounded-lg transition-colors duration-300"
+                    className="w-full px-4 py-2 mb-4 rounded-lg transition-colors duration-300 border"
                     style={{
                       backgroundColor: getBg("background"),
                       borderColor: getBg("inputBorder"),
@@ -150,8 +163,8 @@ export default function Settings() {
               </button>
               {showPasswordForm && (
                 <div
-                  className="mt-4 p-4 sm:p-6 rounded-lg transition-all duration-300"
-                  style={{ backgroundColor: getBg("inputBg") }}
+                  className="mt-4 p-4 sm:p-6 rounded-lg transition-all duration-300 border"
+                  style={{ backgroundColor: getBg("inputBg"), borderColor: getBg("inputBorder") }}
                 >
                   <label className="block mb-2" style={{ color: getBg("subText") }}>
                     New Password:
@@ -159,7 +172,7 @@ export default function Settings() {
                   <input
                     type="password"
                     placeholder="Enter new password"
-                    className="w-full px-4 py-2 mb-4 rounded-lg transition-colors duration-300"
+                    className="w-full px-4 py-2 mb-4 rounded-lg transition-colors duration-300 border"
                     style={{
                       backgroundColor: getBg("background"),
                       borderColor: getBg("inputBorder"),
@@ -172,7 +185,7 @@ export default function Settings() {
                   <input
                     type="password"
                     placeholder="Confirm new password"
-                    className="w-full px-4 py-2 mb-4 rounded-lg transition-colors duration-300"
+                    className="w-full px-4 py-2 mb-4 rounded-lg transition-colors duration-300 border"
                     style={{
                       backgroundColor: getBg("background"),
                       borderColor: getBg("inputBorder"),
@@ -196,31 +209,31 @@ export default function Settings() {
 
         {/* Appearance Tab */}
         {activeTab === "appearance" && (
-  <div>
-    <h2 className="text-2xl sm:text-3xl font-bold mb-6">Appearance Settings</h2>
-    <p style={{ color: getBg("subText") }} className="mb-4">
-      Choose a theme for the whole application:
-    </p>
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-bold mb-6">Appearance Settings</h2>
+            <p style={{ color: getBg("subText") }} className="mb-4">
+              Choose a theme for the whole application:
+            </p>
 
-    <div className="flex gap-4 flex-wrap">
-      {["light", "dark", "purple"].map((t) => (
-        <button
-          key={t}
-          onClick={() => switchTheme(t)}
-          className="px-6 py-2 rounded-lg font-semibold transition-all duration-300 shadow-md"
-          style={{
-            backgroundColor: theme.primary,
-            color: theme.buttonText,
-            border:
-              currentThemeName === t ? `3px solid ${theme.activeTabBg}` : `1px solid ${theme.borderColor}`,
-          }}
-        >
-          {t.charAt(0).toUpperCase() + t.slice(1)}
-        </button>
-      ))}
-    </div>
-  </div>
-)}
+            <div className="flex gap-4 flex-wrap">
+              {["light", "dark", "purple"].map((t) => (
+                <button
+                  key={t}
+                  onClick={() => switchTheme(t)}
+                  className="px-6 py-2 rounded-lg font-semibold transition-all duration-300 shadow-md"
+                  style={{
+                    backgroundColor: theme.primary,
+                    color: theme.buttonText,
+                    border:
+                      currentThemeName === t ? `3px solid ${theme.activeTabBg}` : `1px solid ${theme.borderColor}`,
+                  }}
+                >
+                  {t.charAt(0).toUpperCase() + t.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Security Tab */}
         {activeTab === "security" && (

@@ -4,8 +4,8 @@ const STORAGE_KEY = "appDataStore_v1";
 
 const defaultData = {
   characters: [], // { id, name, imageUrl }
-  ocPackages: [], // { id, coins, price, offer, offerTimeLeft }
-  shopItems: [], // { id, name, price, color, offer, offerTimeLeft, icon }
+  ocPackages: [], // { id, coins, price, offer, offerEndAt }
+  shopItems: [], // { id, name, price, color, offer, offerEndAt, icon, imageUrl }
   wheelRewards: [], // { id, name, color, icon }
 };
 
@@ -39,6 +39,13 @@ export function DataProvider({ children }) {
     }));
   };
 
+  const updateCharacter = (id, updates) => {
+    setStore((prev) => ({
+      ...prev,
+      characters: prev.characters.map((c) => (c.id === id ? { ...c, ...updates } : c)),
+    }));
+  };
+
   const addOcPackage = (pkg) => {
     setStore((prev) => ({
       ...prev,
@@ -49,9 +56,16 @@ export function DataProvider({ children }) {
           coins: Number(pkg.coins) || 0,
           price: Number(pkg.price) || 0,
           offer: Boolean(pkg.offer) || false,
-          offerTimeLeft: Number(pkg.offerTimeLeft) || 0,
+          offerEndAt: pkg.offerEndAt || null,
         },
       ],
+    }));
+  };
+
+  const updateOcPackage = (id, updates) => {
+    setStore((prev) => ({
+      ...prev,
+      ocPackages: prev.ocPackages.map((p) => (p.id === id ? { ...p, ...updates } : p)),
     }));
   };
 
@@ -66,10 +80,18 @@ export function DataProvider({ children }) {
           price: Number(item.price) || 0,
           color: item.color || "bg-gray-500",
           offer: Boolean(item.offer) || false,
-          offerTimeLeft: Number(item.offerTimeLeft) || 0,
+          offerEndAt: item.offerEndAt || null,
           icon: item.icon || "🛒",
+          imageUrl: item.imageUrl || "",
         },
       ],
+    }));
+  };
+
+  const updateShopItem = (id, updates) => {
+    setStore((prev) => ({
+      ...prev,
+      shopItems: prev.shopItems.map((s) => (s.id === id ? { ...s, ...updates } : s)),
     }));
   };
 
@@ -88,7 +110,14 @@ export function DataProvider({ children }) {
     }));
   };
 
-  // === NEW: Remove functions ===
+  const updateWheelReward = (id, updates) => {
+    setStore((prev) => ({
+      ...prev,
+      wheelRewards: prev.wheelRewards.map((w) => (w.id === id ? { ...w, ...updates } : w)),
+    }));
+  };
+
+  // === Remove functions ===
   const removeCharacter = (id) => {
     setStore((prev) => ({
       ...prev,
@@ -117,17 +146,35 @@ export function DataProvider({ children }) {
     }));
   };
 
+  // File upload helper: persist as data URL in localStorage-backed store
+  const uploadFile = async (file) => {
+    if (!file) return "";
+    const toDataUrl = (f) =>
+      new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result?.toString() || "");
+        reader.onerror = reject;
+        reader.readAsDataURL(f);
+      });
+    return await toDataUrl(file);
+  };
+
   const value = useMemo(
     () => ({
       store,
       addCharacter,
+      updateCharacter,
       addOcPackage,
+      updateOcPackage,
       addShopItem,
+      updateShopItem,
       addWheelReward,
+      updateWheelReward,
       removeCharacter,
       removeOcPackage,
       removeShopItem,
       removeWheelReward,
+      uploadFile,
     }),
     [store]
   );
