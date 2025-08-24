@@ -1,11 +1,18 @@
 import AuthCard from "./AuthCard";
 import { useAuth } from "./AuthContext";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 export default function Login() {
-  const { loginCredentials, register, isAdmin: isAdminRole } = useAuth();
+  const { loginCredentials, register, isAuthenticated, isAdmin: isAdminRole } = useAuth();
   const navigate = useNavigate();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate(isAdminRole ? "/admin" : "/");
+    }
+  }, [isAuthenticated, isAdminRole, navigate]);
 
   // login state
   const [emailOrName, setEmailOrName] = useState("");
@@ -24,11 +31,10 @@ export default function Login() {
     e.preventDefault();
     setError("");
     const res = await loginCredentials({ emailOrName, password, isAdmin });
-    if (res.ok) {
-      navigate(isAdminRole ? "/admin" : "/");
-    } else {
+    if (!res.ok) {
       setError(res.error || "Login failed");
     }
+    // Navigation will be handled by useEffect when auth state updates
   };
 
   const handleSignup = async (e) => {
@@ -39,11 +45,10 @@ export default function Login() {
       return;
     }
     const res = await register({ name, email: signupEmail, password: signupPassword });
-    if (res.ok) {
-      navigate("/");
-    } else {
+    if (!res.ok) {
       setSignupError(res.error || "Registration failed");
     }
+    // Navigation will be handled by useEffect when auth state updates
   };
 
   return (

@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext, useMemo } from "react";
+import { useState, useEffect, useContext } from "react";
 import { FaCoins } from "react-icons/fa";
 import { ThemeContext } from "../context/ThemeContext";
 import { useData } from "../context/DataContext";

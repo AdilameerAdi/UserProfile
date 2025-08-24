@@ -11,59 +11,88 @@ export function AuthProvider({ children }) {
 		isLoading: true,
 	});
 
+	// Cache for user profiles to avoid repeated DB calls
+	const profileCache = useMemo(() => new Map(), []);
+
 	// Load initial session and subscribe to auth changes
 	useEffect(() => {
 		let isMounted = true;
 
 		const loadSession = async () => {
-			const { data: sessionData, error } = await supabase.auth.getSession();
-			if (error) {
-				if (isMounted) setAuthState((prev) => ({ ...prev, isAuthenticated: false, currentUser: null, role: "user", isLoading: false }));
-				return;
-			}
-			const session = sessionData?.session;
-			const user = session?.user || null;
-			if (!user) {
-				if (isMounted) setAuthState((prev) => ({ ...prev, isAuthenticated: false, currentUser: null, role: "user", isLoading: false }));
-				return;
-			}
-
-			const profile = await fetchUserProfile(user.id);
-			if (isMounted) {
-				setAuthState({
-					isAuthenticated: true,
-					role: profile?.is_admin ? "admin" : "user",
-					currentUser: {
-						id: user.id,
-						name: profile?.full_name || user.user_metadata?.name || user.email?.split("@")[0] || "User",
-						email: user.email || "",
-						role: profile?.is_admin ? "admin" : "user",
-					},
-					isLoading: false,
-				});
+			try {
+				// Clear all browser storage related to authentication
+				localStorage.clear();
+				sessionStorage.clear();
+				
+				// Clear profile cache
+				profileCache.clear();
+				
+				// Always clear any existing session on app start
+				await supabase.auth.signOut();
+				
+				if (!isMounted) return;
+				
+				// Always start unauthenticated - force fresh login
+				setAuthState({ isAuthenticated: false, currentUser: null, role: "user", isLoading: false });
+			} catch {
+				if (isMounted) {
+					// Clear storage even if signOut fails
+					localStorage.clear();
+					sessionStorage.clear();
+					profileCache.clear();
+					setAuthState({ isAuthenticated: false, currentUser: null, role: "user", isLoading: false });
+				}
 			}
 		};
 
+		// Clear session on app start
 		loadSession();
 
-		const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+		// Listen for auth changes (login, logout, etc)
+		const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+			// Skip initial session since we handle it in loadSession
+			if (event === 'INITIAL_SESSION') return;
+			
 			const nextUser = session?.user || null;
 			if (!nextUser) {
 				setAuthState({ isAuthenticated: false, role: "user", currentUser: null, isLoading: false });
 				return;
 			}
-			const profile = await fetchUserProfile(nextUser.id);
+			
+			// Set authenticated state immediately for faster UI
 			setAuthState({
 				isAuthenticated: true,
-				role: profile?.is_admin ? "admin" : "user",
+				role: "user", // Default to user, will update if admin
 				currentUser: {
 					id: nextUser.id,
-					name: profile?.full_name || nextUser.user_metadata?.name || nextUser.email?.split("@")[0] || "User",
+					name: nextUser.user_metadata?.name || nextUser.email?.split("@")[0] || "User",
 					email: nextUser.email || "",
-					role: profile?.is_admin ? "admin" : "user",
+					role: "user",
 				},
 				isLoading: false,
 			});
+
+			// Fetch profile in background and update if needed
+			const profile = await fetchUserProfile(nextUser.id);
+			if (profile?.is_admin) {
+				setAuthState(prev => ({
+					...prev,
+					role: "admin",
+					currentUser: {
+						...prev.currentUser,
+						name: profile.full_name || prev.currentUser.name,
+						role: "admin",
+					}
+				}));
+			} else if (profile?.full_name) {
+				setAuthState(prev => ({
+					...prev,
+					currentUser: {
+						...prev.currentUser,
+						name: profile.full_name,
+					}
+				}));
+			}
 		});
 
 		return () => {
@@ -73,17 +102,25 @@ export function AuthProvider({ children }) {
 	}, []);
 
 	const fetchUserProfile = async (userId) => {
+		// Check cache first
+		if (profileCache.has(userId)) {
+			return profileCache.get(userId);
+		}
+
 		const { data, error } = await supabase
 			.from("profiles")
 			.select("id, full_name, is_admin")
 			.eq("id", userId)
 			.single();
+		
 		if (error) return null;
+		
+		// Cache the result
+		profileCache.set(userId, data);
 		return data;
 	};
 
 	const loginCredentials = async ({ emailOrName, password, isAdmin = false }) => {
-		console.log("Login attempt:", { emailOrName, isAdmin });
 		
 		if (isAdmin) {
 			// Fallback admin login (legacy). Prefer using profile.is_admin for real admin accounts.
@@ -108,30 +145,16 @@ export function AuthProvider({ children }) {
 			});
 			
 			if (error) {
-				console.error("Login error:", error);
 				return { ok: false, error: error.message || "Invalid email or password" };
 			}
-
-			console.log("Login successful:", data);
 			
 			const user = data?.user;
 			if (!user) return { ok: false, error: "Login failed" };
 
-			const profile = await fetchUserProfile(user.id);
-			setAuthState({
-				isAuthenticated: true,
-				role: profile?.is_admin ? "admin" : "user",
-				currentUser: {
-					id: user.id,
-					name: profile?.full_name || user.user_metadata?.name || user.email?.split("@")[0] || "User",
-					email: user.email || "",
-					role: profile?.is_admin ? "admin" : "user",
-				},
-				isLoading: false,
-			});
+			// The auth state will be updated by the onAuthStateChange listener
+			// We just need to return success here
 			return { ok: true };
 		} catch (err) {
-			console.error("Login exception:", err);
 			return { ok: false, error: "Login failed. Please check your credentials." };
 		}
 	};
@@ -140,8 +163,6 @@ export function AuthProvider({ children }) {
 		if (!name || !email || !password) {
 			return { ok: false, error: "All fields are required" };
 		}
-		
-		console.log("Attempting to register user:", { name, email });
 		
 		try {
 			// Sign up the user
@@ -156,45 +177,28 @@ export function AuthProvider({ children }) {
 			});
 			
 			if (error) {
-				console.error("Signup error:", error);
 				return { ok: false, error: error.message };
 			}
-			
-			console.log("Signup response:", data);
 			
 			let user = data?.user || null;
 			
 			// Create or update profile with name
 			if (user) {
-				console.log("Creating profile for user:", user.id);
-				const { error: profileError } = await supabase
+				await supabase
 					.from("profiles")
 					.upsert({ 
 						id: user.id, 
 						full_name: name 
 					});
-				
-				if (profileError) {
-					console.error("Profile creation error:", profileError);
-				} else {
-					console.log("Profile created successfully");
-				}
 			}
 			
 			// If no session (e.g., email confirm required), try to sign in directly
 			if (!data?.session && user) {
-				console.log("No session returned, attempting direct sign in");
-				const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ 
+				const { data: signInData } = await supabase.auth.signInWithPassword({ 
 					email, 
 					password 
 				});
-				
-				if (signInError) {
-					console.error("Auto sign-in error:", signInError);
-				} else {
-					user = signInData?.user || user;
-					console.log("Auto sign-in successful");
-				}
+				user = signInData?.user || user;
 			}
 			
 			if (user) {
@@ -210,12 +214,10 @@ export function AuthProvider({ children }) {
 					},
 					isLoading: false,
 				});
-				console.log("User registered and authenticated successfully");
 			}
 			
 			return { ok: true };
-		} catch (err) {
-			console.error("Registration error:", err);
+		} catch {
 			return { ok: false, error: "Registration failed. Please try again." };
 		}
 	};
@@ -254,8 +256,24 @@ export function AuthProvider({ children }) {
 	};
 
 	const logout = async () => {
-		await supabase.auth.signOut();
+		// Clear profile cache immediately
+		profileCache.clear();
+		
+		// Update auth state immediately (don't wait for Supabase)
 		setAuthState({ isAuthenticated: false, role: "user", currentUser: null, isLoading: false });
+		
+		// Try to sign out from Supabase in background
+		try {
+			// Add timeout to prevent hanging
+			const signOutPromise = supabase.auth.signOut();
+			const timeoutPromise = new Promise((_, reject) =>
+				setTimeout(() => reject(new Error('Signout timeout')), 3000)
+			);
+			
+			await Promise.race([signOutPromise, timeoutPromise]);
+		} catch {
+			// Continue anyway since we already cleared local state
+		}
 	};
 
 	const value = useMemo(

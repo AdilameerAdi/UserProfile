@@ -67,7 +67,7 @@ function Navbar() {
 
         {/* Sign Out */}
         <button
-          onClick={() => { logout(); navigate("/login"); }}
+          onClick={() => logout()}
           className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg shadow-md text-sm sm:text-base transition duration-300"
           style={{
             background: theme.navbarSignOutBackground || "#EF4444",

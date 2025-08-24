@@ -4,12 +4,9 @@ import { useAuth } from "./AuthContext"; // adjust path if needed
 export default function ProtectedRoute({ children }) {
   const { isAuthenticated, isLoading } = useAuth();
 
+  // Minimal loading state - removed the heavy div wrapper
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-gray-600">
-        Loading...
-      </div>
-    );
+    return null; // Just show nothing while loading for faster initial render
   }
 
   if (!isAuthenticated) {
