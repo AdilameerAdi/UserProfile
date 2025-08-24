@@ -88,7 +88,7 @@ export default function Home() {
         <h1 className="text-3xl font-bold mb-6 text-gray-800">User Profile</h1>
 
         {/* Inner Card */}
-        <div className="bg-white shadow-md rounded-xl p-6 w-full max-w-sm text-center">
+        <div className="bg-gray-400 shadow-md rounded-xl p-6 w-full max-w-sm text-center">
           {/* Profile Photo */}
           <div className="mb-6 flex justify-center">
             <img
@@ -105,11 +105,11 @@ export default function Home() {
                 type="text"
                 value={userName}
                 onChange={(e) => setUserName(e.target.value)}
-                className="border p-2 rounded w-2/3 text-center"
+                className="border text-white p-2 rounded w-2/3 text-center"
                 autoFocus
               />
             ) : (
-              <h2 className="text-xl font-semibold">{userName}</h2>
+              <h2 className="text-xl text-white font-semibold">{userName}</h2>
             )}
             <p className="text-gray-500">{email}</p>
             {saveError && <p className="text-red-600 text-sm mt-2">{saveError}</p>}
@@ -121,7 +121,7 @@ export default function Home() {
               <button
                 onClick={handleSaveName}
                 disabled={savingName}
-                className="px-5 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-60"
+                className="px-5 py-2 bg-green-500 text-black rounded-lg hover:bg-green-600 disabled:opacity-60"
               >
                 {savingName ? "Saving..." : "Save Name"}
               </button>

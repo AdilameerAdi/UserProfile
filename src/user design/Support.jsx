@@ -60,7 +60,7 @@ export default function Support() {
           rel="noopener noreferrer"
           className="inline-flex items-center justify-center font-semibold px-6 py-3 rounded-lg shadow-md transition duration-300"
           style={{
-            backgroundColor: theme.buttonBg,
+            backgroundColor: "purple",
             color: theme.buttonText,
           }}
         >
