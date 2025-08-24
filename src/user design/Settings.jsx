@@ -1,8 +1,10 @@
 import { useState, useContext, useEffect } from "react";
 import { ThemeContext } from "../context/ThemeContext";
+import { useAuth } from "../signup/AuthContext";
 
 export default function Settings() {
   const { theme, switchTheme, currentThemeName } = useContext(ThemeContext);
+  const { currentUser, updateEmail, updatePassword } = useAuth();
 
   const [activeTab, setActiveTab] = useState("account");
   const [showEmailForm, setShowEmailForm] = useState(false);
@@ -14,6 +16,15 @@ export default function Settings() {
     steam: false,
     google: false,
   });
+
+  const [newEmail, setNewEmail] = useState("");
+  const [emailMsg, setEmailMsg] = useState("");
+  const [emailErr, setEmailErr] = useState("");
+
+  const [newPass, setNewPass] = useState("");
+  const [confirmPass, setConfirmPass] = useState("");
+  const [passMsg, setPassMsg] = useState("");
+  const [passErr, setPassErr] = useState("");
 
   useEffect(() => {
     try {
@@ -33,6 +44,45 @@ export default function Settings() {
       ...prev,
       [platform]: !prev[platform],
     }));
+  };
+
+  const submitEmailChange = async () => {
+    setEmailMsg("");
+    setEmailErr("");
+    if (!newEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+      setEmailErr("Please enter a valid email address");
+      return;
+    }
+    const res = await updateEmail(newEmail.trim());
+    if (!res.ok) {
+      setEmailErr(res.error || "Failed to update email");
+      return;
+    }
+    setEmailMsg("Email updated. Check your inbox if confirmation is required.");
+    setShowEmailForm(false);
+    setNewEmail("");
+  };
+
+  const submitPasswordChange = async () => {
+    setPassMsg("");
+    setPassErr("");
+    if (!newPass || newPass.length < 6) {
+      setPassErr("Password must be at least 6 characters");
+      return;
+    }
+    if (newPass !== confirmPass) {
+      setPassErr("Passwords do not match");
+      return;
+    }
+    const res = await updatePassword(newPass);
+    if (!res.ok) {
+      setPassErr(res.error || "Failed to update password");
+      return;
+    }
+    setPassMsg("Password updated successfully");
+    setShowPasswordForm(false);
+    setNewPass("");
+    setConfirmPass("");
   };
 
   const getBg = (color) => theme[color] || color;
@@ -87,7 +137,7 @@ export default function Settings() {
               </p>
               <input
                 type="text"
-                value="user@example.com"
+                value={currentUser?.email || ""}
                 disabled
                 className="w-full px-4 py-2 rounded-lg text-sm sm:text-base transition-colors duration-300 border"
                 style={{
@@ -115,7 +165,7 @@ export default function Settings() {
             {/* Change Email */}
             <div className="mb-6">
               <button
-                onClick={() => setShowEmailForm(!showEmailForm)}
+                onClick={() => { setShowEmailForm(!showEmailForm); setEmailErr(""); setEmailMsg(""); }}
                 style={{ color: getBg("primary") }}
               >
                 {showEmailForm ? "Cancel Email Change" : "Change Email?"}
@@ -131,14 +181,19 @@ export default function Settings() {
                   <input
                     type="email"
                     placeholder="Enter new email"
-                    className="w-full px-4 py-2 mb-4 rounded-lg transition-colors duration-300 border"
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
+                    className="w-full px-4 py-2 mb-2 rounded-lg transition-colors duration-300 border"
                     style={{
                       backgroundColor: getBg("background"),
                       borderColor: getBg("inputBorder"),
                       color: getBg("text"),
                     }}
                   />
+                  {emailErr && <p className="text-red-500 text-sm mb-2">{emailErr}</p>}
+                  {emailMsg && <p className="text-green-500 text-sm mb-2">{emailMsg}</p>}
                   <button
+                    onClick={submitEmailChange}
                     className="w-full sm:w-auto px-4 py-2 rounded-lg transition-colors duration-300"
                     style={{
                       backgroundColor: getBg("primary"),
@@ -154,7 +209,7 @@ export default function Settings() {
             {/* Change Password */}
             <div>
               <button
-                onClick={() => setShowPasswordForm(!showPasswordForm)}
+                onClick={() => { setShowPasswordForm(!showPasswordForm); setPassErr(""); setPassMsg(""); }}
                 style={{ color: getBg("primary") }}
               >
                 {showPasswordForm
@@ -172,6 +227,8 @@ export default function Settings() {
                   <input
                     type="password"
                     placeholder="Enter new password"
+                    value={newPass}
+                    onChange={(e) => setNewPass(e.target.value)}
                     className="w-full px-4 py-2 mb-4 rounded-lg transition-colors duration-300 border"
                     style={{
                       backgroundColor: getBg("background"),
@@ -185,6 +242,8 @@ export default function Settings() {
                   <input
                     type="password"
                     placeholder="Confirm new password"
+                    value={confirmPass}
+                    onChange={(e) => setConfirmPass(e.target.value)}
                     className="w-full px-4 py-2 mb-4 rounded-lg transition-colors duration-300 border"
                     style={{
                       backgroundColor: getBg("background"),
@@ -192,7 +251,10 @@ export default function Settings() {
                       color: getBg("text"),
                     }}
                   />
+                  {passErr && <p className="text-red-500 text-sm mb-2">{passErr}</p>}
+                  {passMsg && <p className="text-green-500 text-sm mb-2">{passMsg}</p>}
                   <button
+                    onClick={submitPasswordChange}
                     className="w-full sm:w-auto px-4 py-2 rounded-lg transition-colors duration-300"
                     style={{
                       backgroundColor: getBg("primary"),

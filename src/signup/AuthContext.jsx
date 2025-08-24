@@ -32,12 +32,12 @@ export function AuthProvider({ children }) {
 			if (isMounted) {
 				setAuthState({
 					isAuthenticated: true,
-					role: "user",
+					role: profile?.is_admin ? "admin" : "user",
 					currentUser: {
 						id: user.id,
 						name: profile?.full_name || user.user_metadata?.name || user.email?.split("@")[0] || "User",
-						email: profile?.email || user.email || "",
-						role: "user",
+						email: user.email || "",
+						role: profile?.is_admin ? "admin" : "user",
 					},
 					isLoading: false,
 				});
@@ -55,12 +55,12 @@ export function AuthProvider({ children }) {
 			const profile = await fetchUserProfile(nextUser.id);
 			setAuthState({
 				isAuthenticated: true,
-				role: "user",
+				role: profile?.is_admin ? "admin" : "user",
 				currentUser: {
 					id: nextUser.id,
 					name: profile?.full_name || nextUser.user_metadata?.name || nextUser.email?.split("@")[0] || "User",
-					email: profile?.email || nextUser.email || "",
-					role: "user",
+					email: nextUser.email || "",
+					role: profile?.is_admin ? "admin" : "user",
 				},
 				isLoading: false,
 			});
@@ -75,7 +75,7 @@ export function AuthProvider({ children }) {
 	const fetchUserProfile = async (userId) => {
 		const { data, error } = await supabase
 			.from("profiles")
-			.select("id, full_name, email")
+			.select("id, full_name, is_admin")
 			.eq("id", userId)
 			.single();
 		if (error) return null;
@@ -84,6 +84,7 @@ export function AuthProvider({ children }) {
 
 	const loginCredentials = async ({ emailOrName, password, isAdmin = false }) => {
 		if (isAdmin) {
+			// Fallback admin login (legacy). Prefer using profile.is_admin for real admin accounts.
 			if (emailOrName === "Adil" && password === "Adil") {
 				setAuthState({
 					isAuthenticated: true,
@@ -93,7 +94,7 @@ export function AuthProvider({ children }) {
 				});
 				return { ok: true };
 			}
-			return { ok: false, error: "Invalid admin credentials" };
+			// Fall through to standard login if legacy creds not used
 		}
 
 		const { data, error } = await supabase.auth.signInWithPassword({ email: emailOrName, password });
@@ -105,12 +106,12 @@ export function AuthProvider({ children }) {
 		const profile = await fetchUserProfile(user.id);
 		setAuthState({
 			isAuthenticated: true,
-			role: "user",
+			role: profile?.is_admin ? "admin" : "user",
 			currentUser: {
 				id: user.id,
 				name: profile?.full_name || user.user_metadata?.name || user.email?.split("@")[0] || "User",
-				email: profile?.email || user.email || "",
-				role: "user",
+				email: user.email || "",
+				role: profile?.is_admin ? "admin" : "user",
 			},
 			isLoading: false,
 		});
@@ -126,9 +127,9 @@ export function AuthProvider({ children }) {
 
 		let user = data?.user || null;
 
-		// Create or update profile with name
+		// Create or update profile with name (do not include email column as it may not exist in schema)
 		if (user) {
-			await supabase.from("profiles").upsert({ id: user.id, full_name: name, email });
+			await supabase.from("profiles").upsert({ id: user.id, full_name: name });
 		}
 
 		// If no session (e.g., email confirm required), try to sign in directly for dev
@@ -141,12 +142,12 @@ export function AuthProvider({ children }) {
 			const profile = await fetchUserProfile(user.id);
 			setAuthState({
 				isAuthenticated: true,
-				role: "user",
+				role: profile?.is_admin ? "admin" : "user",
 				currentUser: {
 					id: user.id,
 					name: profile?.full_name || name,
-					email: profile?.email || email,
-					role: "user",
+					email: user.email || email,
+					role: profile?.is_admin ? "admin" : "user",
 				},
 				isLoading: false,
 			});
@@ -167,6 +168,27 @@ export function AuthProvider({ children }) {
 		return { ok: true };
 	};
 
+	const updateEmail = async (newEmail) => {
+		if (!newEmail) return { ok: false, error: "Email required" };
+		const { data, error } = await supabase.auth.updateUser({ email: newEmail });
+		if (error) return { ok: false, error: error.message };
+		const user = data?.user;
+		if (user) {
+			setAuthState((prev) => ({
+				...prev,
+				currentUser: prev.currentUser ? { ...prev.currentUser, email: user.email || newEmail } : prev.currentUser,
+			}));
+		}
+		return { ok: true };
+	};
+
+	const updatePassword = async (newPassword) => {
+		if (!newPassword) return { ok: false, error: "Password required" };
+		const { error } = await supabase.auth.updateUser({ password: newPassword });
+		if (error) return { ok: false, error: error.message };
+		return { ok: true };
+	};
+
 	const logout = async () => {
 		await supabase.auth.signOut();
 		setAuthState({ isAuthenticated: false, role: "user", currentUser: null, isLoading: false });
@@ -183,6 +205,8 @@ export function AuthProvider({ children }) {
 			register,
 			logout,
 			updateProfileName,
+			updateEmail,
+			updatePassword,
 		}),
 		[authState]
 	);
