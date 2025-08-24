@@ -8,30 +8,20 @@ export default function PurchaseOC() {
   const { store } = useData();
 
   const [selectedPackage, setSelectedPackage] = useState(null);
-  const [offerTimers, setOfferTimers] = useState({}); // id -> seconds left
+  const [now, setNow] = useState(Date.now());
 
   const packages = store.ocPackages;
 
   useEffect(() => {
-    const initial = {};
-    packages.forEach((p) => {
-      if (p.offer && p.offerTimeLeft > 0) initial[p.id] = p.offerTimeLeft;
-    });
-    setOfferTimers(initial);
-  }, [packages]);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setOfferTimers((prev) => {
-        const next = { ...prev };
-        Object.keys(next).forEach((id) => {
-          next[id] = Math.max(0, next[id] - 1);
-        });
-        return next;
-      });
-    }, 1000);
+    const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
   }, []);
+
+  const timeLeftFor = (pkg) => {
+    if (!pkg.offer || !pkg.offerEndAt) return 0;
+    const end = new Date(pkg.offerEndAt).getTime();
+    return Math.max(0, Math.floor((end - now) / 1000));
+  };
 
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60);
@@ -48,7 +38,7 @@ export default function PurchaseOC() {
       }}
     >
       <h1 className="text-3xl font-bold mb-2">Purchase OC</h1>
-      <p className="text-gray-400 mb-6" style={{ color: theme.subTextColor || "#9CA3AF" }}>
+      <p className="mb-6" style={{ color: theme.subTextColor || "#9CA3AF" }}>
         Select a package to buy coins and unlock exciting features!
       </p>
 
@@ -60,7 +50,7 @@ export default function PurchaseOC() {
         )}
         {packages.map((pkg) => {
           const active = selectedPackage === pkg.id;
-          const timeLeft = offerTimers[pkg.id] ?? 0;
+          const timeLeft = timeLeftFor(pkg);
 
           return (
             <div
@@ -70,17 +60,18 @@ export default function PurchaseOC() {
               style={{
                 borderColor: active
                   ? theme.activeBorder || "#3B82F6"
-                  : theme.inactiveBorder || "#374151",
+                  : theme.cardBorderColor,
                 background: active
-                  ? theme.activeBackground || "rgba(59, 130, 246, 0.1)"
-                  : theme.inactiveBackground || "transparent",
+                  ? theme.activeBg
+                  : theme.cardBackground,
+                color: theme.textColor,
               }}
             >
               <FaCoins
                 className="text-4xl mb-2"
                 style={{ color: theme.coinColor || "#FBBF24" }}
               />
-              <h3 className="text-lg font-semibold">{pkg.coins.toLocaleString()} Coins</h3>
+              <h3 className="text-lg font-semibold">{Number(pkg.coins).toLocaleString()} Coins</h3>
               <p style={{ color: theme.subTextColor || "#9CA3AF" }}>€{Number(pkg.price).toFixed(2)}</p>
 
               {pkg.offer && (
@@ -119,11 +110,9 @@ export default function PurchaseOC() {
         className="w-full md:w-auto px-8 py-3 rounded-lg font-semibold transition-all duration-300"
         style={{
           background: selectedPackage
-            ? theme.buttonBackground || "linear-gradient(to right, #3B82F6, #6366F1)"
-            : theme.disabledButtonBackground || "#374151",
-          color: selectedPackage
-            ? theme.buttonText || "#FFFFFF"
-            : theme.disabledButtonText || "#9CA3AF",
+            ? theme.buttonColor || "linear-gradient(to right, #3B82F6, #6366F1)"
+            : theme.disabledButton || "#374151",
+          color: theme.buttonTextColor || "#FFFFFF",
           cursor: selectedPackage ? "pointer" : "not-allowed",
         }}
       >

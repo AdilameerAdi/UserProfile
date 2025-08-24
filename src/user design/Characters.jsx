@@ -25,10 +25,10 @@ export default function Characters() {
         {characters.map((char) => (
           <div
             key={char.id}
-            className="flex flex-col items-center rounded-lg overflow-hidden shadow-md transition transform hover:scale-105"
+            className="flex flex-col items-center rounded-lg overflow-hidden shadow-md transition transform hover:scale-105 border"
             style={{
               backgroundColor: theme.cardBg || theme.bgColor,
-              border: `1px solid ${theme.borderColor}`,
+              borderColor: theme.cardBorderColor,
             }}
           >
             {char.imageUrl ? (
@@ -38,15 +38,16 @@ export default function Characters() {
                 className="w-full h-40 object-cover"
               />
             ) : (
-              <div className="w-full h-40 flex items-center justify-center text-4xl" style={{ background: theme.inactiveTabBg }}>
+              <div className="w-full h-40 flex items-center justify-center text-4xl" style={{ background: theme.inactiveTabBg, color: theme.textColor }}>
                 🧙
               </div>
             )}
             <div
-              className="w-full text-center py-3 text-sm font-semibold"
+              className="w-full text-center py-3 text-sm font-semibold border-t"
               style={{
                 color: theme.textColor,
-                backgroundColor: theme.cardFooterBg || theme.bgColor,
+                backgroundColor: theme.cardBg,
+                borderColor: theme.cardBorderColor,
               }}
             >
               {char.name}

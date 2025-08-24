@@ -1,34 +1,26 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { FaCoins } from "react-icons/fa";
 import { useData } from "../context/DataContext";
+import { ThemeContext } from "../context/ThemeContext";
 
 export default function Shop() {
   const { store } = useData();
+  const { theme } = useContext(ThemeContext);
   const [selectedItem, setSelectedItem] = useState(null);
-  const [offerTimers, setOfferTimers] = useState({});
+  const [now, setNow] = useState(Date.now());
 
   const items = store.shopItems;
 
   useEffect(() => {
-    const initial = {};
-    items.forEach((it) => {
-      if (it.offer && it.offerTimeLeft > 0) initial[it.id] = it.offerTimeLeft;
-    });
-    setOfferTimers(initial);
-  }, [items]);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setOfferTimers((prev) => {
-        const next = { ...prev };
-        Object.keys(next).forEach((id) => {
-          next[id] = Math.max(0, next[id] - 1);
-        });
-        return next;
-      });
-    }, 1000);
+    const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
   }, []);
+
+  const timeLeftFor = (it) => {
+    if (!it.offer || !it.offerEndAt) return 0;
+    const end = new Date(it.offerEndAt).getTime();
+    return Math.max(0, Math.floor((end - now) / 1000));
+  };
 
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60);
@@ -37,41 +29,42 @@ export default function Shop() {
   };
 
   return (
-    <div className="p-6 text-gray-100">
+    <div className="p-6" style={{ color: theme.textColor }}>
       {/* Heading */}
       <h1 className="text-3xl font-bold mb-2">Shop</h1>
-      <p className="text-gray-400 mb-6">Buy exclusive items using your coins!</p>
+      <p className="mb-6" style={{ color: theme.subTextColor }}>Buy exclusive items using your coins!</p>
 
       {/* Shop Items Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 mb-8">
         {items.length === 0 && (
-          <div className="col-span-full text-center text-sm text-gray-400">
+          <div className="col-span-full text-center text-sm" style={{ color: theme.subTextColor }}>
             No shop items yet. Admin can add items in Admin Panel.
           </div>
         )}
         {items.map((item) => {
           const active = selectedItem === item.id;
-          const timeLeft = offerTimers[item.id] ?? 0;
+          const timeLeft = timeLeftFor(item);
           const discountedPrice = item.offer ? Math.floor(Number(item.price) * 0.8) : Number(item.price);
 
           return (
             <div
               key={item.id}
               onClick={() => setSelectedItem(item.id)}
-              className={`relative cursor-pointer rounded-xl border transition-all duration-300 flex flex-col justify-between items-center text-center
-                w-36 h-44 p-3
-                ${
-                  active
-                    ? "border-green-500 bg-gradient-to-br from-green-500/10 to-emerald-500/10"
-                    : "border-gray-700 hover:border-green-400"
-                }`}
+              className={`relative cursor-pointer rounded-xl border transition-all duration-300 flex flex-col justify-between items-center text-center w-36 h-48 p-3`}
+              style={{
+                borderColor: active ? theme.activeBorder : theme.cardBorderColor,
+                background: active ? theme.activeBg : theme.cardBackground,
+                color: theme.textColor,
+              }}
             >
-              {/* Icon inside colored circle */}
-              <div
-                className={`w-12 h-12 flex items-center justify-center rounded-full ${item.color} text-white mb-2 text-xl`}
-              >
-                {typeof item.icon === "string" ? item.icon : <span>🛒</span>}
-              </div>
+              {/* Image or Icon */}
+              {item.imageUrl ? (
+                <img src={item.imageUrl} alt={item.name} className="w-16 h-16 object-cover rounded mb-2 border" style={{ borderColor: theme.cardBorderColor }} />
+              ) : (
+                <div className={`w-12 h-12 flex items-center justify-center rounded-full ${item.color} text-white mb-2 text-xl`}>
+                  {typeof item.icon === "string" ? item.icon : <span>🛒</span>}
+                </div>
+              )}
 
               {/* Item Name */}
               <h3 className="text-sm font-semibold mb-1">{item.name}</h3>
@@ -80,15 +73,15 @@ export default function Shop() {
               <div className="flex flex-col items-center">
                 {item.offer ? (
                   <>
-                    <p className="flex items-center gap-1 text-gray-400 line-through text-base font-semibold">
+                    <p className="flex items-center gap-1 line-through text-base font-semibold" style={{ color: theme.subTextColor }}>
                       <FaCoins /> {Number(item.price)}
                     </p>
-                    <p className="flex items-center gap-1 text-yellow-400 font-bold text-lg">
+                    <p className="flex items-center gap-1 font-bold text-lg" style={{ color: theme.highlightColor }}>
                       <FaCoins /> {discountedPrice}
                     </p>
                   </>
                 ) : (
-                  <p className="flex items-center gap-1 text-yellow-400 font-bold">
+                  <p className="flex items-center gap-1 font-bold" style={{ color: theme.highlightColor }}>
                     <FaCoins /> {Number(item.price)}
                   </p>
                 )}
@@ -96,21 +89,21 @@ export default function Shop() {
 
               {/* Offer Badge */}
               {item.offer && (
-                <div className="absolute top-2 left-2 bg-gradient-to-r from-pink-500 to-red-500 text-white text-xs font-semibold px-2 py-1 rounded-full">
+                <div className="absolute top-2 left-2 text-white text-xs font-semibold px-2 py-1 rounded-full" style={{ background: theme.offerBadgeBackground || "linear-gradient(to right, #EC4899, #EF4444)" }}>
                   SALE
                 </div>
               )}
 
               {/* Countdown */}
               {item.offer && timeLeft > 0 && (
-                <p className="text-red-400 text-xs font-bold mt-1">
+                <p className="text-xs font-bold mt-1" style={{ color: theme.offerTimer || "#F87171" }}>
                   Ends in: {formatTime(timeLeft)}
                 </p>
               )}
 
               {/* Selected Indicator */}
               {active && (
-                <p className="text-green-400 text-xs font-semibold mt-1">
+                <p className="text-xs font-semibold mt-1" style={{ color: theme.activeText }}>
                   Selected
                 </p>
               )}
@@ -122,12 +115,11 @@ export default function Shop() {
       {/* Buy Button */}
       <button
         disabled={!selectedItem}
-        className={`w-full md:w-auto px-8 py-3 rounded-lg font-semibold transition-all duration-300
-          ${
-            selectedItem
-              ? "bg-gradient-to-r from-green-500 to-emerald-600 hover:opacity-90"
-              : "bg-gray-700 cursor-not-allowed"
-          }`}
+        className={`w-full md:w-auto px-8 py-3 rounded-lg font-semibold transition-all duration-300 ${!selectedItem ? "cursor-not-allowed" : ""}`}
+        style={{
+          background: selectedItem ? theme.buttonColor : theme.disabledButton,
+          color: theme.buttonTextColor,
+        }}
       >
         {selectedItem ? "Purchase Item" : "Select an Item"}
       </button>
