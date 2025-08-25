@@ -1,10 +1,16 @@
 import { useState, useContext, useEffect } from "react";
 import { ThemeContext } from "../context/ThemeContext";
 import { useAuth } from "../signup/AuthContext";
+import { supabase } from "../supabaseClient"; // make sure the path is correct
 
 export default function Settings() {
   const { theme, switchTheme, currentThemeName } = useContext(ThemeContext);
-  const { currentUser, updateEmail, updatePassword } = useAuth();
+  const { currentUser: authUser, updateEmail, updatePassword } = useAuth();
+  const [currentUser, setCurrentUser] = useState(authUser || null);
+
+  const [recoveryEmail, setRecoveryEmail] = useState("");
+  const [recovErr, setRecovErr] = useState("");
+  const [recovMsg, setRecovMsg] = useState("");
 
   const [activeTab, setActiveTab] = useState("account");
   const [showEmailForm, setShowEmailForm] = useState(false);
@@ -165,7 +171,11 @@ export default function Settings() {
             {/* Change Email */}
             <div className="mb-6">
               <button
-                onClick={() => { setShowEmailForm(!showEmailForm); setEmailErr(""); setEmailMsg(""); }}
+                onClick={() => {
+                  setShowEmailForm(!showEmailForm);
+                  setEmailErr("");
+                  setEmailMsg("");
+                }}
                 style={{ color: getBg("primary") }}
               >
                 {showEmailForm ? "Cancel Email Change" : "Change Email?"}
@@ -173,7 +183,10 @@ export default function Settings() {
               {showEmailForm && (
                 <div
                   className="mt-4 p-4 sm:p-6 rounded-lg transition-all duration-300 border"
-                  style={{ backgroundColor: getBg("inputBg"), borderColor: getBg("inputBorder") }}
+                  style={{
+                    backgroundColor: getBg("inputBg"),
+                    borderColor: getBg("inputBorder"),
+                  }}
                 >
                   <label className="block mb-2" style={{ color: getBg("subText") }}>
                     New Email:
@@ -190,8 +203,12 @@ export default function Settings() {
                       color: getBg("text"),
                     }}
                   />
-                  {emailErr && <p className="text-red-500 text-sm mb-2">{emailErr}</p>}
-                  {emailMsg && <p className="text-green-500 text-sm mb-2">{emailMsg}</p>}
+                  {emailErr && (
+                    <p className="text-red-500 text-sm mb-2">{emailErr}</p>
+                  )}
+                  {emailMsg && (
+                    <p className="text-green-500 text-sm mb-2">{emailMsg}</p>
+                  )}
                   <button
                     onClick={submitEmailChange}
                     className="w-full sm:w-auto px-4 py-2 rounded-lg transition-colors duration-300"
@@ -209,7 +226,11 @@ export default function Settings() {
             {/* Change Password */}
             <div>
               <button
-                onClick={() => { setShowPasswordForm(!showPasswordForm); setPassErr(""); setPassMsg(""); }}
+                onClick={() => {
+                  setShowPasswordForm(!showPasswordForm);
+                  setPassErr("");
+                  setPassMsg("");
+                }}
                 style={{ color: getBg("primary") }}
               >
                 {showPasswordForm
@@ -219,7 +240,10 @@ export default function Settings() {
               {showPasswordForm && (
                 <div
                   className="mt-4 p-4 sm:p-6 rounded-lg transition-all duration-300 border"
-                  style={{ backgroundColor: getBg("inputBg"), borderColor: getBg("inputBorder") }}
+                  style={{
+                    backgroundColor: getBg("inputBg"),
+                    borderColor: getBg("inputBorder"),
+                  }}
                 >
                   <label className="block mb-2" style={{ color: getBg("subText") }}>
                     New Password:
@@ -251,8 +275,12 @@ export default function Settings() {
                       color: getBg("text"),
                     }}
                   />
-                  {passErr && <p className="text-red-500 text-sm mb-2">{passErr}</p>}
-                  {passMsg && <p className="text-green-500 text-sm mb-2">{passMsg}</p>}
+                  {passErr && (
+                    <p className="text-red-500 text-sm mb-2">{passErr}</p>
+                  )}
+                  {passMsg && (
+                    <p className="text-green-500 text-sm mb-2">{passMsg}</p>
+                  )}
                   <button
                     onClick={submitPasswordChange}
                     className="w-full sm:w-auto px-4 py-2 rounded-lg transition-colors duration-300"
@@ -272,7 +300,9 @@ export default function Settings() {
         {/* Appearance Tab */}
         {activeTab === "appearance" && (
           <div>
-            <h2 className="text-2xl sm:text-3xl font-bold mb-6">Appearance Settings</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold mb-6">
+              Appearance Settings
+            </h2>
             <p style={{ color: getBg("subText") }} className="mb-4">
               Choose a theme for the whole application:
             </p>
@@ -287,7 +317,9 @@ export default function Settings() {
                     backgroundColor: theme.primary,
                     color: theme.buttonText,
                     border:
-                      currentThemeName === t ? `3px solid ${theme.activeTabBg}` : `1px solid ${theme.borderColor}`,
+                      currentThemeName === t
+                        ? `3px solid ${theme.activeTabBg}`
+                        : `1px solid ${theme.borderColor}`,
                   }}
                 >
                   {t.charAt(0).toUpperCase() + t.slice(1)}
@@ -300,10 +332,109 @@ export default function Settings() {
         {/* Security Tab */}
         {activeTab === "security" && (
           <div>
-            <h2 className="text-2xl sm:text-3xl font-bold mb-6">Security Settings</h2>
-            <p style={{ color: getBg("subText") }}>
-              Other security options (2FA, login alerts, etc.) can go here...
+            <h2 className="text-2xl sm:text-3xl font-bold mb-6">
+              Security Settings
+            </h2>
+            <p style={{ color: getBg("subText") }} className="mb-4">
+              For security purposes, you can add a recovery email:
             </p>
+
+            <div
+              className="p-4 sm:p-6 rounded-lg transition-all duration-300 border max-w-md"
+              style={{
+                backgroundColor: getBg("inputBg"),
+                borderColor: getBg("inputBorder"),
+              }}
+            >
+              {currentUser?.recovery_email && (
+                <p className="mb-4 text-green-600 font-semibold">
+                  You have set your recovery email.
+                </p>
+              )}
+
+              <label className="block mb-2" style={{ color: getBg("subText") }}>
+                {currentUser?.recovery_email
+                  ? "Recovery Email:"
+                  : "Add Recovery Email:"}
+              </label>
+
+              <div className="flex items-center gap-2 mb-2">
+                <input
+                  type="email"
+                  placeholder="Enter recovery email"
+                  value={recoveryEmail || currentUser?.recovery_email || ""}
+                  onChange={(e) => setRecoveryEmail(e.target.value)}
+                  disabled={currentUser?.recovery_email && !showRecoveryForm}
+                  className="flex-1 px-4 py-2 rounded-lg transition-colors duration-300 border"
+                  style={{
+                    backgroundColor: getBg("background"),
+                    borderColor: getBg("inputBorder"),
+                    color: getBg("text"),
+                  }}
+                />
+                {currentUser?.recovery_email && !showRecoveryForm && (
+                  <button
+                    onClick={() => {
+                      setShowRecoveryForm(true);
+                      setRecovErr("");
+                      setRecovMsg("");
+                      setRecoveryEmail(currentUser.recovery_email);
+                    }}
+                    className="px-4 py-2 rounded-lg transition-colors duration-300"
+                    style={{
+                      backgroundColor: getBg("primary"),
+                      color: getBg("buttonText"),
+                    }}
+                  >
+                    Edit
+                  </button>
+                )}
+              </div>
+
+              {recovErr && (
+                <p className="text-red-500 text-sm mb-2">{recovErr}</p>
+              )}
+              {recovMsg && (
+                <p className="text-green-500 text-sm mb-2">{recovMsg}</p>
+              )}
+
+              {(!currentUser?.recovery_email || showRecoveryForm) && (
+                <button
+                  onClick={async () => {
+                    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recoveryEmail)) {
+                      setRecovErr("Please enter a valid email");
+                      return;
+                    }
+                    setRecovErr("");
+
+                    const { data, error } = await supabase
+                      .from("profiles")
+                      .update({ recovery_email: recoveryEmail })
+                      .eq("id", currentUser.id)
+                      .select("recovery_email")
+                      .single();
+
+                    if (error) {
+                      setRecovErr("Failed to save. Try again.");
+                    } else {
+                      setRecovMsg("Recovery email saved successfully!");
+                      setCurrentUser({
+                        ...currentUser,
+                        recovery_email: data.recovery_email,
+                      });
+                      setShowRecoveryForm(false);
+                    }
+                  }}
+                  className="w-full sm:w-auto px-4 py-2 rounded-lg transition-colors duration-300"
+                  style={{
+                    backgroundColor: getBg("primary"),
+                    color: getBg("buttonText"),
+                  }}
+                >
+                  Save Recovery Email
+                </button>
+              )}
+            </div>
           </div>
         )}
 
@@ -312,8 +443,14 @@ export default function Settings() {
           <div>
             <h2 className="text-2xl sm:text-3xl font-bold mb-6">Connections</h2>
             {["discord", "steam", "google"].map((platform) => (
-              <div key={platform} className="mb-4 flex items-center justify-between">
-                <span style={{ color: getBg("subText") }} className="capitalize">
+              <div
+                key={platform}
+                className="mb-4 flex items-center justify-between"
+              >
+                <span
+                  style={{ color: getBg("subText") }}
+                  className="capitalize"
+                >
                   {platform}
                 </span>
                 <button
