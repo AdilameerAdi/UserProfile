@@ -46,9 +46,7 @@ export default function App() {
             element={
               <AdminRoute>
                 <Navbar />
-                <Layout>
-                  <Admin />
-                </Layout>
+                <Admin />
               </AdminRoute>
             }
           />

@@ -183,7 +183,7 @@ export function AuthProvider({ children }) {
 							return { ok: true };
 						}
 					}
-				} catch (timeoutError) {
+				} catch {
 					// If recovery email check times out, just return the original error
 					// Silent fail in production
 				}
@@ -194,9 +194,6 @@ export function AuthProvider({ children }) {
 				// Not a valid email format (might be username for admin)
 				return { ok: false, error: "Please enter a valid email address" };
 			}
-			
-			const user = loginResult.data?.user;
-			if (!user) return { ok: false, error: "Login failed" };
 
 			// The auth state will be updated by the onAuthStateChange listener
 			// We just need to return success here

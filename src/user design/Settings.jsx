@@ -37,13 +37,17 @@ export default function Settings() {
     try {
       const saved = localStorage.getItem("appThemeName_v1");
       if (saved) switchTheme(saved);
-    } catch (_) {}
+    } catch {
+      // Silent fail
+    }
   }, []);
 
   useEffect(() => {
     try {
       localStorage.setItem("appThemeName_v1", currentThemeName);
-    } catch (_) {}
+    } catch {
+      // Silent fail
+    }
   }, [currentThemeName]);
 
   // Fetch recovery email when component mounts or user changes

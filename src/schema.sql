@@ -161,3 +161,94 @@ $$;
 -- Grant execute permission to authenticated users
 GRANT EXECUTE ON FUNCTION public.login_with_recovery_email TO authenticated;
 GRANT EXECUTE ON FUNCTION public.login_with_recovery_email TO anon;
+
+-- ============================================================
+-- ADMIN FEATURES TABLES
+-- ============================================================
+
+-- Characters table
+CREATE TABLE IF NOT EXISTS public.characters (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  image_url TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Disable RLS for admin tables (since admin access is handled by application logic)
+-- Characters table - no RLS needed for admin functionality
+ALTER TABLE public.characters DISABLE ROW LEVEL SECURITY;
+
+-- OC Packages table
+CREATE TABLE IF NOT EXISTS public.oc_packages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  coins INTEGER NOT NULL CHECK (coins > 0),
+  price DECIMAL(10,2) NOT NULL CHECK (price > 0),
+  offer BOOLEAN DEFAULT FALSE,
+  offer_end_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- OC Packages table - no RLS needed for admin functionality
+ALTER TABLE public.oc_packages DISABLE ROW LEVEL SECURITY;
+
+-- Shop Items table
+CREATE TABLE IF NOT EXISTS public.shop_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  price INTEGER NOT NULL CHECK (price >= 0),
+  color TEXT DEFAULT 'bg-blue-500',
+  offer BOOLEAN DEFAULT FALSE,
+  offer_end_at TIMESTAMPTZ,
+  icon TEXT DEFAULT '🛒',
+  image_url TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Shop Items table - no RLS needed for admin functionality
+ALTER TABLE public.shop_items DISABLE ROW LEVEL SECURITY;
+
+-- Wheel Rewards table
+CREATE TABLE IF NOT EXISTS public.wheel_rewards (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  color TEXT DEFAULT 'bg-yellow-500',
+  icon TEXT DEFAULT '🎁',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Wheel Rewards table - no RLS needed for admin functionality  
+ALTER TABLE public.wheel_rewards DISABLE ROW LEVEL SECURITY;
+
+-- Enable the remaining admin tables for immediate use
+ALTER TABLE public.oc_packages DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.shop_items DISABLE ROW LEVEL SECURITY;
+
+-- Update triggers for updated_at columns
+CREATE OR REPLACE FUNCTION public.update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Apply triggers to all tables
+CREATE TRIGGER update_characters_updated_at 
+BEFORE UPDATE ON public.characters
+FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+CREATE TRIGGER update_oc_packages_updated_at 
+BEFORE UPDATE ON public.oc_packages
+FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+CREATE TRIGGER update_shop_items_updated_at 
+BEFORE UPDATE ON public.shop_items
+FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+CREATE TRIGGER update_wheel_rewards_updated_at 
+BEFORE UPDATE ON public.wheel_rewards
+FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();

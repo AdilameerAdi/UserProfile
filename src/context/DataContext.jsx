@@ -1,182 +1,419 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-
-const STORAGE_KEY = "appDataStore_v1";
+import { supabase } from "../supabaseClient";
 
 const defaultData = {
-  characters: [], // { id, name, imageUrl }
-  ocPackages: [], // { id, coins, price, offer, offerEndAt }
-  shopItems: [], // { id, name, price, color, offer, offerEndAt, icon, imageUrl }
+  characters: [], // { id, name, image_url }
+  ocPackages: [], // { id, coins, price, offer, offer_end_at }
+  shopItems: [], // { id, name, price, color, offer, offer_end_at, icon, image_url }
   wheelRewards: [], // { id, name, color, icon }
 };
 
 const DataContext = createContext();
 
 export function DataProvider({ children }) {
-  const [store, setStore] = useState(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : defaultData;
-    } catch (_) {
-      return defaultData;
-    }
-  });
+  const [store, setStore] = useState(defaultData);
+  const [loading, setLoading] = useState(true);
 
+  // Load initial data from database
   useEffect(() => {
+    loadAllData();
+  }, []);
+
+  const loadAllData = async () => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
-    } catch (_) {
-      // ignore persistence errors
+      setLoading(true);
+      
+      // Load all data in parallel
+      const [charactersRes, ocPackagesRes, shopItemsRes, wheelRewardsRes] = await Promise.all([
+        supabase.from("characters").select("*").order("created_at", { ascending: false }),
+        supabase.from("oc_packages").select("*").order("created_at", { ascending: false }),
+        supabase.from("shop_items").select("*").order("created_at", { ascending: false }),
+        supabase.from("wheel_rewards").select("*").order("created_at", { ascending: false })
+      ]);
+
+      setStore({
+        characters: charactersRes.data || [],
+        ocPackages: ocPackagesRes.data || [],
+        shopItems: shopItemsRes.data || [],
+        wheelRewards: wheelRewardsRes.data || [],
+      });
+    } catch (error) {
+      console.error("Error loading data:", error);
+    } finally {
+      setLoading(false);
     }
-  }, [store]);
-
-  const addCharacter = (character) => {
-    setStore((prev) => ({
-      ...prev,
-      characters: [
-        ...prev.characters,
-        { id: crypto.randomUUID(), name: character.name || "Unnamed", imageUrl: character.imageUrl || "" },
-      ],
-    }));
   };
 
-  const updateCharacter = (id, updates) => {
-    setStore((prev) => ({
-      ...prev,
-      characters: prev.characters.map((c) => (c.id === id ? { ...c, ...updates } : c)),
-    }));
+  // ============ CHARACTER OPERATIONS ============
+  const addCharacter = async (character) => {
+    try {
+      const { data, error } = await supabase
+        .from("characters")
+        .insert({
+          name: character.name || "Unnamed",
+          image_url: character.imageUrl || ""
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setStore((prev) => ({
+        ...prev,
+        characters: [data, ...prev.characters],
+      }));
+
+      return { success: true, data };
+    } catch (error) {
+      console.error("Error adding character:", error);
+      return { success: false, error: error.message };
+    }
   };
 
-  const addOcPackage = (pkg) => {
-    setStore((prev) => ({
-      ...prev,
-      ocPackages: [
-        ...prev.ocPackages,
-        {
-          id: crypto.randomUUID(),
+  const updateCharacter = async (id, updates) => {
+    try {
+      const { data, error } = await supabase
+        .from("characters")
+        .update({
+          name: updates.name,
+          image_url: updates.imageUrl
+        })
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setStore((prev) => ({
+        ...prev,
+        characters: prev.characters.map((c) => (c.id === id ? data : c)),
+      }));
+
+      return { success: true, data };
+    } catch (error) {
+      console.error("Error updating character:", error);
+      return { success: false, error: error.message };
+    }
+  };
+
+  const removeCharacter = async (id) => {
+    try {
+      const { error } = await supabase
+        .from("characters")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      setStore((prev) => ({
+        ...prev,
+        characters: prev.characters.filter((c) => c.id !== id),
+      }));
+
+      return { success: true };
+    } catch (error) {
+      console.error("Error removing character:", error);
+      return { success: false, error: error.message };
+    }
+  };
+
+  // ============ OC PACKAGE OPERATIONS ============
+  const addOcPackage = async (pkg) => {
+    try {
+      const { data, error } = await supabase
+        .from("oc_packages")
+        .insert({
           coins: Number(pkg.coins) || 0,
           price: Number(pkg.price) || 0,
           offer: Boolean(pkg.offer) || false,
-          offerEndAt: pkg.offerEndAt || null,
-        },
-      ],
-    }));
+          offer_end_at: pkg.offerEndAt || null
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setStore((prev) => ({
+        ...prev,
+        ocPackages: [data, ...prev.ocPackages],
+      }));
+
+      return { success: true, data };
+    } catch (error) {
+      console.error("Error adding OC package:", error);
+      return { success: false, error: error.message };
+    }
   };
 
-  const updateOcPackage = (id, updates) => {
-    setStore((prev) => ({
-      ...prev,
-      ocPackages: prev.ocPackages.map((p) => (p.id === id ? { ...p, ...updates } : p)),
-    }));
+  const updateOcPackage = async (id, updates) => {
+    try {
+      const { data, error } = await supabase
+        .from("oc_packages")
+        .update({
+          coins: Number(updates.coins),
+          price: Number(updates.price),
+          offer: Boolean(updates.offer),
+          offer_end_at: updates.offerEndAt || null
+        })
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setStore((prev) => ({
+        ...prev,
+        ocPackages: prev.ocPackages.map((p) => (p.id === id ? data : p)),
+      }));
+
+      return { success: true, data };
+    } catch (error) {
+      console.error("Error updating OC package:", error);
+      return { success: false, error: error.message };
+    }
   };
 
-  const addShopItem = (item) => {
-    setStore((prev) => ({
-      ...prev,
-      shopItems: [
-        ...prev.shopItems,
-        {
-          id: crypto.randomUUID(),
+  const removeOcPackage = async (id) => {
+    try {
+      const { error } = await supabase
+        .from("oc_packages")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      setStore((prev) => ({
+        ...prev,
+        ocPackages: prev.ocPackages.filter((p) => p.id !== id),
+      }));
+
+      return { success: true };
+    } catch (error) {
+      console.error("Error removing OC package:", error);
+      return { success: false, error: error.message };
+    }
+  };
+
+  // ============ SHOP ITEM OPERATIONS ============
+  const addShopItem = async (item) => {
+    try {
+      const { data, error } = await supabase
+        .from("shop_items")
+        .insert({
           name: item.name || "Item",
           price: Number(item.price) || 0,
           color: item.color || "bg-gray-500",
           offer: Boolean(item.offer) || false,
-          offerEndAt: item.offerEndAt || null,
+          offer_end_at: item.offerEndAt || null,
           icon: item.icon || "🛒",
-          imageUrl: item.imageUrl || "",
-        },
-      ],
-    }));
+          image_url: item.imageUrl || ""
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setStore((prev) => ({
+        ...prev,
+        shopItems: [data, ...prev.shopItems],
+      }));
+
+      return { success: true, data };
+    } catch (error) {
+      console.error("Error adding shop item:", error);
+      return { success: false, error: error.message };
+    }
   };
 
-  const updateShopItem = (id, updates) => {
-    setStore((prev) => ({
-      ...prev,
-      shopItems: prev.shopItems.map((s) => (s.id === id ? { ...s, ...updates } : s)),
-    }));
+  const updateShopItem = async (id, updates) => {
+    try {
+      const { data, error } = await supabase
+        .from("shop_items")
+        .update({
+          name: updates.name,
+          price: Number(updates.price),
+          color: updates.color,
+          offer: Boolean(updates.offer),
+          offer_end_at: updates.offerEndAt || null,
+          icon: updates.icon,
+          image_url: updates.imageUrl || ""
+        })
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setStore((prev) => ({
+        ...prev,
+        shopItems: prev.shopItems.map((s) => (s.id === id ? data : s)),
+      }));
+
+      return { success: true, data };
+    } catch (error) {
+      console.error("Error updating shop item:", error);
+      return { success: false, error: error.message };
+    }
   };
 
-  const addWheelReward = (reward) => {
-    setStore((prev) => ({
-      ...prev,
-      wheelRewards: [
-        ...prev.wheelRewards,
-        {
-          id: crypto.randomUUID(),
+  const removeShopItem = async (id) => {
+    try {
+      const { error } = await supabase
+        .from("shop_items")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      setStore((prev) => ({
+        ...prev,
+        shopItems: prev.shopItems.filter((s) => s.id !== id),
+      }));
+
+      return { success: true };
+    } catch (error) {
+      console.error("Error removing shop item:", error);
+      return { success: false, error: error.message };
+    }
+  };
+
+  // ============ WHEEL REWARD OPERATIONS ============
+  const addWheelReward = async (reward) => {
+    try {
+      const { data, error } = await supabase
+        .from("wheel_rewards")
+        .insert({
           name: reward.name || "Reward",
           color: reward.color || "bg-blue-500",
-          icon: reward.icon || "🎁",
-        },
-      ],
-    }));
+          icon: reward.icon || "🎁"
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setStore((prev) => ({
+        ...prev,
+        wheelRewards: [data, ...prev.wheelRewards],
+      }));
+
+      return { success: true, data };
+    } catch (error) {
+      console.error("Error adding wheel reward:", error);
+      return { success: false, error: error.message };
+    }
   };
 
-  const updateWheelReward = (id, updates) => {
-    setStore((prev) => ({
-      ...prev,
-      wheelRewards: prev.wheelRewards.map((w) => (w.id === id ? { ...w, ...updates } : w)),
-    }));
+  const updateWheelReward = async (id, updates) => {
+    try {
+      const { data, error } = await supabase
+        .from("wheel_rewards")
+        .update({
+          name: updates.name,
+          color: updates.color,
+          icon: updates.icon
+        })
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setStore((prev) => ({
+        ...prev,
+        wheelRewards: prev.wheelRewards.map((w) => (w.id === id ? data : w)),
+      }));
+
+      return { success: true, data };
+    } catch (error) {
+      console.error("Error updating wheel reward:", error);
+      return { success: false, error: error.message };
+    }
   };
 
-  // === Remove functions ===
-  const removeCharacter = (id) => {
-    setStore((prev) => ({
-      ...prev,
-      characters: prev.characters.filter((c) => c.id !== id),
-    }));
+  const removeWheelReward = async (id) => {
+    try {
+      const { error } = await supabase
+        .from("wheel_rewards")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      setStore((prev) => ({
+        ...prev,
+        wheelRewards: prev.wheelRewards.filter((w) => w.id !== id),
+      }));
+
+      return { success: true };
+    } catch (error) {
+      console.error("Error removing wheel reward:", error);
+      return { success: false, error: error.message };
+    }
   };
 
-  const removeOcPackage = (id) => {
-    setStore((prev) => ({
-      ...prev,
-      ocPackages: prev.ocPackages.filter((p) => p.id !== id),
-    }));
-  };
-
-  const removeShopItem = (id) => {
-    setStore((prev) => ({
-      ...prev,
-      shopItems: prev.shopItems.filter((s) => s.id !== id),
-    }));
-  };
-
-  const removeWheelReward = (id) => {
-    setStore((prev) => ({
-      ...prev,
-      wheelRewards: prev.wheelRewards.filter((w) => w.id !== id),
-    }));
-  };
-
-  // File upload helper: persist as data URL in localStorage-backed store
+  // File upload helper: Upload to Supabase Storage
   const uploadFile = async (file) => {
     if (!file) return "";
-    const toDataUrl = (f) =>
-      new Promise((resolve, reject) => {
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const filePath = `uploads/${fileName}`;
+
+      const { error } = await supabase.storage
+        .from('images') // Make sure this bucket exists in Supabase
+        .upload(filePath, file);
+
+      if (error) {
+        console.error("File upload error:", error);
+        // Fallback to data URL for development
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result?.toString() || "");
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('images')
+        .getPublicUrl(filePath);
+
+      return publicUrl;
+    } catch (error) {
+      console.error("File upload failed:", error);
+      // Fallback to data URL for development
+      return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result?.toString() || "");
         reader.onerror = reject;
-        reader.readAsDataURL(f);
+        reader.readAsDataURL(file);
       });
-    return await toDataUrl(file);
+    }
   };
 
   const value = useMemo(
     () => ({
       store,
+      loading,
+      loadAllData,
       addCharacter,
       updateCharacter,
+      removeCharacter,
       addOcPackage,
       updateOcPackage,
+      removeOcPackage,
       addShopItem,
       updateShopItem,
+      removeShopItem,
       addWheelReward,
       updateWheelReward,
-      removeCharacter,
-      removeOcPackage,
-      removeShopItem,
       removeWheelReward,
       uploadFile,
     }),
-    [store]
+    [store, loading]
   );
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
