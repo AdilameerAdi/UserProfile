@@ -9,6 +9,7 @@ export default function Settings() {
   const [currentUser, setCurrentUser] = useState(authUser || null);
 
   const [recoveryEmail, setRecoveryEmail] = useState("");
+  const [savedRecoveryEmail, setSavedRecoveryEmail] = useState("");
   const [recovErr, setRecovErr] = useState("");
   const [recovMsg, setRecovMsg] = useState("");
 
@@ -44,6 +45,33 @@ export default function Settings() {
       localStorage.setItem("appThemeName_v1", currentThemeName);
     } catch (_) {}
   }, [currentThemeName]);
+
+  // Fetch recovery email when component mounts or user changes
+  useEffect(() => {
+    if (authUser?.id) {
+      setCurrentUser(authUser);
+      fetchRecoveryEmail();
+    }
+  }, [authUser]);
+
+  const fetchRecoveryEmail = async () => {
+    if (!authUser?.id) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("recovery_email")
+        .eq("id", authUser.id)
+        .single();
+      
+      if (!error && data?.recovery_email) {
+        setSavedRecoveryEmail(data.recovery_email);
+        setRecoveryEmail(data.recovery_email);
+      }
+    } catch (err) {
+      // Silent fail - recovery email is optional
+    }
+  };
 
   const toggleConnection = (platform) => {
     setConnections((prev) => ({
@@ -336,7 +364,7 @@ export default function Settings() {
               Security Settings
             </h2>
             <p style={{ color: getBg("subText") }} className="mb-4">
-              For security purposes, you can add a recovery email:
+              Add a recovery email to login with either your primary or recovery email address:
             </p>
 
             <div
@@ -346,25 +374,30 @@ export default function Settings() {
                 borderColor: getBg("inputBorder"),
               }}
             >
-              {currentUser?.recovery_email && (
-                <p className="mb-4 text-green-600 font-semibold">
-                  You have set your recovery email.
-                </p>
+              {savedRecoveryEmail && (
+                <div className="mb-4">
+                  <p className="text-green-600 font-semibold mb-2">
+                    Recovery email saved
+                  </p>
+                  <p className="text-sm" style={{ color: getBg("subText") }}>
+                    You can now login with either your primary email or recovery email.
+                  </p>
+                </div>
               )}
 
               <label className="block mb-2" style={{ color: getBg("subText") }}>
-                {currentUser?.recovery_email
-                  ? "Recovery Email:"
-                  : "Add Recovery Email:"}
+                {savedRecoveryEmail && !showRecoveryForm
+                  ? "Current Recovery Email:"
+                  : "Recovery Email:"}
               </label>
 
               <div className="flex items-center gap-2 mb-2">
                 <input
                   type="email"
                   placeholder="Enter recovery email"
-                  value={recoveryEmail || currentUser?.recovery_email || ""}
+                  value={recoveryEmail}
                   onChange={(e) => setRecoveryEmail(e.target.value)}
-                  disabled={currentUser?.recovery_email && !showRecoveryForm}
+                  disabled={savedRecoveryEmail && !showRecoveryForm}
                   className="flex-1 px-4 py-2 rounded-lg transition-colors duration-300 border"
                   style={{
                     backgroundColor: getBg("background"),
@@ -372,13 +405,12 @@ export default function Settings() {
                     color: getBg("text"),
                   }}
                 />
-                {currentUser?.recovery_email && !showRecoveryForm && (
+                {savedRecoveryEmail && !showRecoveryForm && (
                   <button
                     onClick={() => {
                       setShowRecoveryForm(true);
                       setRecovErr("");
                       setRecovMsg("");
-                      setRecoveryEmail(currentUser.recovery_email);
                     }}
                     className="px-4 py-2 rounded-lg transition-colors duration-300"
                     style={{
@@ -386,7 +418,7 @@ export default function Settings() {
                       color: getBg("buttonText"),
                     }}
                   >
-                    Edit
+                    Change
                   </button>
                 )}
               </div>
@@ -398,41 +430,78 @@ export default function Settings() {
                 <p className="text-green-500 text-sm mb-2">{recovMsg}</p>
               )}
 
-              {(!currentUser?.recovery_email || showRecoveryForm) && (
-                <button
-                  onClick={async () => {
-                    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recoveryEmail)) {
-                      setRecovErr("Please enter a valid email");
-                      return;
-                    }
-                    setRecovErr("");
+              {(!savedRecoveryEmail || showRecoveryForm) && (
+                <div className="flex gap-2">
+                  <button
+                    onClick={async () => {
+                      setRecovErr("");
+                      setRecovMsg("");
+                      
+                      if (!recoveryEmail) {
+                        setRecovErr("Please enter a recovery email");
+                        return;
+                      }
+                      
+                      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recoveryEmail)) {
+                        setRecovErr("Please enter a valid email address");
+                        return;
+                      }
+                      
+                      // Check if recovery email is same as primary email
+                      if (recoveryEmail === authUser?.email) {
+                        setRecovErr("Recovery email must be different from your primary email");
+                        return;
+                      }
 
-                    const { data, error } = await supabase
-                      .from("profiles")
-                      .update({ recovery_email: recoveryEmail })
-                      .eq("id", currentUser.id)
-                      .select("recovery_email")
-                      .single();
+                      try {
+                        const { data, error } = await supabase
+                          .from("profiles")
+                          .update({ recovery_email: recoveryEmail })
+                          .eq("id", authUser.id)
+                          .select("recovery_email")
+                          .single();
 
-                    if (error) {
-                      setRecovErr("Failed to save. Try again.");
-                    } else {
-                      setRecovMsg("Recovery email saved successfully!");
-                      setCurrentUser({
-                        ...currentUser,
-                        recovery_email: data.recovery_email,
-                      });
-                      setShowRecoveryForm(false);
-                    }
-                  }}
-                  className="w-full sm:w-auto px-4 py-2 rounded-lg transition-colors duration-300"
-                  style={{
-                    backgroundColor: getBg("primary"),
-                    color: getBg("buttonText"),
-                  }}
-                >
-                  Save Recovery Email
-                </button>
+                        if (error) {
+                          if (error.code === '23505') {
+                            setRecovErr("This email is already used as a recovery email");
+                          } else {
+                            setRecovErr("Failed to save recovery email. Please try again.");
+                          }
+                        } else {
+                          setRecovMsg("Recovery email saved successfully!");
+                          setSavedRecoveryEmail(data.recovery_email);
+                          setShowRecoveryForm(false);
+                        }
+                      } catch (err) {
+                        setRecovErr("An error occurred. Please try again.");
+                      }
+                    }}
+                    className="px-4 py-2 rounded-lg transition-colors duration-300"
+                    style={{
+                      backgroundColor: getBg("primary"),
+                      color: getBg("buttonText"),
+                    }}
+                  >
+                    {savedRecoveryEmail ? "Update" : "Save"} Recovery Email
+                  </button>
+                  {showRecoveryForm && (
+                    <button
+                      onClick={() => {
+                        setShowRecoveryForm(false);
+                        setRecoveryEmail(savedRecoveryEmail);
+                        setRecovErr("");
+                        setRecovMsg("");
+                      }}
+                      className="px-4 py-2 rounded-lg transition-colors duration-300 border"
+                      style={{
+                        borderColor: getBg("inputBorder"),
+                        color: getBg("text"),
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           </div>

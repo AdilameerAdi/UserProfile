@@ -109,7 +109,7 @@ export function AuthProvider({ children }) {
 
 		const { data, error } = await supabase
 			.from("profiles")
-			.select("id, full_name, is_admin")
+			.select("id, full_name, is_admin, recovery_email")
 			.eq("id", userId)
 			.single();
 		
@@ -119,6 +119,7 @@ export function AuthProvider({ children }) {
 		profileCache.set(userId, data);
 		return data;
 	};
+
 
 	const loginCredentials = async ({ emailOrName, password, isAdmin = false }) => {
 		
@@ -137,18 +138,64 @@ export function AuthProvider({ children }) {
 		}
 
 		try {
-			// For now, assume emailOrName is always an email for regular users
-			// TODO: Add logic to check if it's email or username and query accordingly
-			const { data, error } = await supabase.auth.signInWithPassword({ 
-				email: emailOrName, 
-				password: password 
-			});
+			// Check if input looks like an email format
+			const isValidEmailFormat = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailOrName);
 			
-			if (error) {
-				return { ok: false, error: error.message || "Invalid email or password" };
+			if (isValidEmailFormat) {
+				// Try primary email login first (most common case)
+				const loginResult = await supabase.auth.signInWithPassword({ 
+					email: emailOrName, 
+					password: password 
+				});
+				
+				if (!loginResult.error) {
+					// Success with primary email
+					const user = loginResult.data?.user;
+					if (user) return { ok: true };
+				}
+				
+				// If primary email failed, try recovery email
+				// This runs in parallel with a timeout for faster response
+				const rpcPromise = supabase.rpc('login_with_recovery_email', {
+					recovery_email: emailOrName,
+					password_input: password
+				});
+				
+				// Add timeout to prevent hanging
+				const timeoutPromise = new Promise((_, reject) => 
+					setTimeout(() => reject(new Error('Recovery check timeout')), 3000)
+				);
+				
+				try {
+					const { data: rpcResult, error: rpcError } = await Promise.race([
+						rpcPromise,
+						timeoutPromise
+					]);
+					
+					if (!rpcError && rpcResult?.success && rpcResult?.primary_email) {
+						// Login with the primary email from recovery
+						const { data: primaryLoginData } = await supabase.auth.signInWithPassword({ 
+							email: rpcResult.primary_email, 
+							password: password 
+						});
+						
+						if (primaryLoginData?.user) {
+							return { ok: true };
+						}
+					}
+				} catch (timeoutError) {
+					// If recovery email check times out, just return the original error
+					// Silent fail in production
+				}
+				
+				// Neither primary nor recovery worked
+				return { ok: false, error: "Invalid email or password" };
+			} else {
+				// Not a valid email format (might be username for admin)
+				return { ok: false, error: "Please enter a valid email address" };
 			}
 			
-			const user = data?.user;
+			const user = loginResult.data?.user;
 			if (!user) return { ok: false, error: "Login failed" };
 
 			// The auth state will be updated by the onAuthStateChange listener
