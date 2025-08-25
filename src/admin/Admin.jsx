@@ -2,6 +2,7 @@ import { useContext, useMemo, useState } from "react";
 import { ThemeContext } from "../context/ThemeContext";
 import { useData } from "../context/DataContext";
 import AdminLayout from "./AdminLayout";
+import { FiSettings } from "react-icons/fi";
 
 export default function Admin() {
   const { theme } = useContext(ThemeContext);

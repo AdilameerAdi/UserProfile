@@ -22,8 +22,7 @@ import Settings from "./user design/Settings";
 import PurchaseOC from "./user design/PurchaseOC";
 import Shop from "./user design/Shop";
 import FortuneWheel from "./user design/FortuneWheel";
-import Admin from "./admin/Admin";
-
+import AdminWithSettings from "./admin/AdminWithSettings";
 import { useAuth } from "./signup/AuthContext";
 function AdminRoute({ children }) {
   const { isAuthenticated, isAdmin } = useAuth();
@@ -46,7 +45,7 @@ export default function App() {
             element={
               <AdminRoute>
                 <Navbar />
-                <Admin />
+                <AdminWithSettings />
               </AdminRoute>
             }
           />
