@@ -101,7 +101,7 @@ export default function Sidebar() {
                   <NavLink
                     key={sub.name}
                     to={sub.path}
-                    className={({ isActive }) =>
+                    className={() =>
                       `block px-4 py-2 text-sm border-l-4 transition-all duration-300`
                     }
                     style={({ isActive }) => ({
@@ -145,7 +145,7 @@ export default function Sidebar() {
                   <NavLink
                     key={sub.name}
                     to={sub.path}
-                    className={({ isActive }) => `block px-4 py-2 text-sm border-l-4 transition-all duration-300`}
+                    className={() => `block px-4 py-2 text-sm border-l-4 transition-all duration-300`}
                     style={({ isActive }) => ({
                       color: isActive ? theme.activeText : theme.textColor,
                       backgroundColor: isActive ? theme.activeBg : "transparent",
@@ -242,7 +242,7 @@ export default function Sidebar() {
                   <NavLink
                     key={sub.name}
                     to={sub.path}
-                    className={({ isActive }) => `block px-4 py-2 text-sm rounded-md border-l-4 transition-all duration-300`}
+                    className={() => `block px-4 py-2 text-sm rounded-md border-l-4 transition-all duration-300`}
                     style={({ isActive }) => ({
                       color: isActive ? theme.activeText : theme.textColor,
                       backgroundColor: isActive ? theme.activeBg : "transparent",
@@ -281,7 +281,7 @@ export default function Sidebar() {
                   <NavLink
                     key={sub.name}
                     to={sub.path}
-                    className={({ isActive }) => `block px-4 py-2 text-sm rounded-md border-l-4 transition-all duration-300`}
+                    className={() => `block px-4 py-2 text-sm rounded-md border-l-4 transition-all duration-300`}
                     style={({ isActive }) => ({
                       color: isActive ? theme.activeText : theme.textColor,
                       backgroundColor: isActive ? theme.activeBg : "transparent",

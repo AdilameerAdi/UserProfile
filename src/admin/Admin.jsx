@@ -1,10 +1,8 @@
 import { useContext, useMemo, useState } from "react";
 import { ThemeContext } from "../context/ThemeContext";
 import { useData } from "../context/DataContext";
-import AdminLayout from "./AdminLayout";
-import { FiSettings } from "react-icons/fi";
 
-export default function Admin() {
+export default function Admin({ activeTab, setActiveTab }) {
   const { theme } = useContext(ThemeContext);
   const {
     store,
@@ -24,20 +22,19 @@ export default function Admin() {
     removeWheelReward,
   } = useData();
 
-  // Set default tab to characters (Add Character)
-  const [activeTab, setActiveTab] = useState("characters");
+  // activeTab and setActiveTab are now passed as props
   
-  const [character, setCharacter] = useState({ name: "", imageUrl: "", _file: null });
+  const [character, setCharacter] = useState({ name: "", imageUrl: "", _file: null, _previewUrl: "" });
   const [pkg, setPkg] = useState({ coins: "", price: "", offer: false, offerEndAt: "" });
-  const [item, setItem] = useState({ name: "", price: "", color: "bg-blue-500", offer: false, offerEndAt: "", icon: "🛒", _file: null, imageUrl: "" });
+  const [item, setItem] = useState({ name: "", price: "", color: "bg-blue-500", offer: false, offerEndAt: "", icon: "🛒", _file: null, imageUrl: "", _previewUrl: "" });
   const [reward, setReward] = useState({ name: "", color: "bg-yellow-500", icon: "🎁" });
   const [edit, setEdit] = useState({ type: null, id: null });
   const isEditing = useMemo(() => Boolean(edit.id && edit.type), [edit]);
 
   const resetAll = () => {
-    setCharacter({ name: "", imageUrl: "", _file: null });
+    setCharacter({ name: "", imageUrl: "", _file: null, _previewUrl: "" });
     setPkg({ coins: "", price: "", offer: false, offerEndAt: "" });
-    setItem({ name: "", price: "", color: "bg-blue-500", offer: false, offerEndAt: "", icon: "🛒", _file: null, imageUrl: "" });
+    setItem({ name: "", price: "", color: "bg-blue-500", offer: false, offerEndAt: "", icon: "🛒", _file: null, imageUrl: "", _previewUrl: "" });
     setReward({ name: "", color: "bg-yellow-500", icon: "🎁" });
     setEdit({ type: null, id: null });
   };
@@ -118,7 +115,7 @@ export default function Admin() {
   const loadForEdit = (type, obj) => {
     setEdit({ type, id: obj.id });
     if (type === "character") {
-      setCharacter({ name: obj.name || "", imageUrl: obj.image_url || "", _file: null });
+      setCharacter({ name: obj.name || "", imageUrl: obj.image_url || "", _file: null, _previewUrl: "" });
       setActiveTab("characters");
     }
     if (type === "pkg") {
@@ -126,7 +123,7 @@ export default function Admin() {
       setActiveTab("ocPackages");
     }
     if (type === "item") {
-      setItem({ name: obj.name || "", price: String(obj.price ?? ""), color: obj.color || "bg-blue-500", offer: Boolean(obj.offer), offerEndAt: obj.offer_end_at || "", icon: obj.icon || "🛒", _file: null, imageUrl: obj.image_url || "" });
+      setItem({ name: obj.name || "", price: String(obj.price ?? ""), color: obj.color || "bg-blue-500", offer: Boolean(obj.offer), offerEndAt: obj.offer_end_at || "", icon: obj.icon || "🛒", _file: null, imageUrl: obj.image_url || "", _previewUrl: "" });
       setActiveTab("shopItems");
     }
     if (type === "reward") {
@@ -157,19 +154,19 @@ export default function Admin() {
               </div>
               <input className="w-full p-2 rounded border" style={inputStyle} placeholder="Character name" value={character.name} onChange={(e) => setCharacter({ ...character, name: e.target.value })} />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <input className="w-full p-2 rounded border" style={inputStyle} placeholder="Image URL (optional)" value={character.imageUrl} onChange={(e) => setCharacter({ ...character, imageUrl: e.target.value, _file: null })} />
+                <input className="w-full p-2 rounded border" style={inputStyle} placeholder="Image URL (optional)" value={character.imageUrl} onChange={(e) => setCharacter({ ...character, imageUrl: e.target.value, _file: null, _previewUrl: "" })} />
                 <label className="block w-full">
                   <span className="text-sm">Upload image from device</span>
                   <input type="file" accept="image/*" className="w-full mt-1" onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (file) {
                       const preview = URL.createObjectURL(file);
-                      setCharacter({ ...character, imageUrl: preview, _file: file });
+                      setCharacter({ ...character, imageUrl: "", _file: file, _previewUrl: preview });
                     }
                   }} />
                 </label>
               </div>
-              {character.imageUrl && <img src={character.imageUrl} alt="preview" className="h-24 w-24 object-cover rounded-lg border" style={{ borderColor: theme.cardBorderColor }} />}
+              {(character.imageUrl || character._previewUrl) && <img src={character.imageUrl || character._previewUrl} alt="preview" className="h-24 w-24 object-cover rounded-lg border" style={{ borderColor: theme.cardBorderColor }} />}
               <div className="flex gap-2">
                 <button className="px-4 py-2 rounded" style={{ background: theme.buttonColor, color: theme.buttonTextColor }} onClick={saveCharacter}>{isEditing && edit.type === "character" ? "Update" : "Add"}</button>
                 {isEditing && edit.type === "character" && <button className="px-4 py-2 rounded" style={{ background: theme.disabledButton, color: theme.textColor }} onClick={resetAll}>Cancel</button>}
@@ -264,19 +261,19 @@ export default function Admin() {
               <input className="w-full p-2 rounded border" style={inputStyle} placeholder="Price" type="number" value={item.price} onChange={(e) => setItem({ ...item, price: e.target.value })} />
               <input className="w-full p-2 rounded border" style={inputStyle} placeholder="Tailwind color class (e.g., bg-red-500)" value={item.color} onChange={(e) => setItem({ ...item, color: e.target.value })} />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <input className="w-full p-2 rounded border" style={inputStyle} placeholder="Image URL (optional)" value={item.imageUrl} onChange={(e) => setItem({ ...item, imageUrl: e.target.value, _file: null })} />
+                <input className="w-full p-2 rounded border" style={inputStyle} placeholder="Image URL (optional)" value={item.imageUrl} onChange={(e) => setItem({ ...item, imageUrl: e.target.value, _file: null, _previewUrl: "" })} />
                 <label className="block w-full">
                   <span className="text-sm">Upload image from device</span>
                   <input type="file" accept="image/*" className="w-full mt-1" onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (file) {
                       const preview = URL.createObjectURL(file);
-                      setItem({ ...item, imageUrl: preview, _file: file });
+                      setItem({ ...item, imageUrl: "", _file: file, _previewUrl: preview });
                     }
                   }} />
                 </label>
               </div>
-              {item.imageUrl && <img src={item.imageUrl} alt="preview" className="h-24 w-24 object-cover rounded-lg border" style={{ borderColor: theme.cardBorderColor }} />}
+              {(item.imageUrl || item._previewUrl) && <img src={item.imageUrl || item._previewUrl} alt="preview" className="h-24 w-24 object-cover rounded-lg border" style={{ borderColor: theme.cardBorderColor }} />}
               <div className="flex items-center gap-2">
                 <input id="itemOffer" type="checkbox" checked={item.offer} onChange={(e) => setItem({ ...item, offer: e.target.checked })} />
                 <label htmlFor="itemOffer">Offer</label>
@@ -403,22 +400,18 @@ export default function Admin() {
 
   if (loading) {
     return (
-      <AdminLayout activeTab={activeTab} setActiveTab={setActiveTab}>
-        <div className="flex items-center justify-center h-64" style={{ color: theme.textColor }}>
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" style={{ borderColor: theme.primary }}></div>
-            <p>Loading admin data...</p>
-          </div>
+      <div className="flex items-center justify-center h-64" style={{ color: theme.textColor }}>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" style={{ borderColor: theme.primary }}></div>
+          <p>Loading admin data...</p>
         </div>
-      </AdminLayout>
+      </div>
     );
   }
 
   return (
-    <AdminLayout activeTab={activeTab} setActiveTab={setActiveTab}>
-      <div className="space-y-8" style={{ color: theme.textColor, fontFamily: theme.fontFamily }}>
-        {renderTabContent()}
-      </div>
-    </AdminLayout>
+    <div className="space-y-8" style={{ color: theme.textColor, fontFamily: theme.fontFamily }}>
+      {renderTabContent()}
+    </div>
   );
 }

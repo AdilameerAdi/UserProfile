@@ -21,6 +21,7 @@ export default function AuthCard({
   confirmPassword,
   setConfirmPassword,
   signupError,
+  successMessage,
 }) {
   const [isLogin, setIsLogin] = useState(true);
 
@@ -162,6 +163,11 @@ export default function AuthCard({
             />
             {signupError && (
               <p className="text-red-500 text-sm">{signupError}</p>
+            )}
+            {successMessage && (
+              <div className="p-3 bg-green-600 bg-opacity-20 border border-green-500 rounded-lg">
+                <p className="text-green-400 text-sm">{successMessage}</p>
+              </div>
             )}
 
             <button

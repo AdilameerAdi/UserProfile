@@ -151,7 +151,19 @@ export function AuthProvider({ children }) {
 				if (!loginResult.error) {
 					// Success with primary email
 					const user = loginResult.data?.user;
-					if (user) return { ok: true };
+					if (user) {
+						// Check if user is confirmed
+						if (!user.email_confirmed_at) {
+							// Sign them out immediately
+							await supabase.auth.signOut();
+							return { 
+								ok: false, 
+								error: "Please confirm your email before logging in. Check your inbox for the confirmation link.",
+								requiresConfirmation: true
+							};
+						}
+						return { ok: true };
+					}
 				}
 				
 				// If primary email failed, try recovery email
@@ -194,11 +206,7 @@ export function AuthProvider({ children }) {
 				// Not a valid email format (might be username for admin)
 				return { ok: false, error: "Please enter a valid email address" };
 			}
-
-			// The auth state will be updated by the onAuthStateChange listener
-			// We just need to return success here
-			return { ok: true };
-		} catch (err) {
+		} catch {
 			return { ok: false, error: "Login failed. Please check your credentials." };
 		}
 	};
@@ -209,7 +217,7 @@ export function AuthProvider({ children }) {
 		}
 		
 		try {
-			// Sign up the user
+			// Sign up the user with email confirmation required
 			const { data, error } = await supabase.auth.signUp({ 
 				email, 
 				password,
@@ -224,9 +232,9 @@ export function AuthProvider({ children }) {
 				return { ok: false, error: error.message };
 			}
 			
-			let user = data?.user || null;
+			const user = data?.user || null;
 			
-			// Create or update profile with name
+			// Create or update profile with name (for when they confirm later)
 			if (user) {
 				await supabase
 					.from("profiles")
@@ -236,16 +244,18 @@ export function AuthProvider({ children }) {
 					});
 			}
 			
-			// If no session (e.g., email confirm required), try to sign in directly
-			if (!data?.session && user) {
-				const { data: signInData } = await supabase.auth.signInWithPassword({ 
-					email, 
-					password 
-				});
-				user = signInData?.user || user;
+			// Check if email confirmation is required
+			if (user && !data?.session) {
+				// User created but not confirmed - do NOT log them in
+				return { 
+					ok: true, 
+					requiresConfirmation: true,
+					message: "Please check your email and click the confirmation link to complete your registration. You can then log in with your credentials."
+				};
 			}
 			
-			if (user) {
+			// If user is already confirmed (in development mode or if confirmations are disabled)
+			if (user && data?.session) {
 				const profile = await fetchUserProfile(user.id);
 				setAuthState({
 					isAuthenticated: true,
@@ -258,9 +268,10 @@ export function AuthProvider({ children }) {
 					},
 					isLoading: false,
 				});
+				return { ok: true };
 			}
 			
-			return { ok: true };
+			return { ok: false, error: "Registration failed. Please try again." };
 		} catch {
 			return { ok: false, error: "Registration failed. Please try again." };
 		}

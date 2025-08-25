@@ -37,8 +37,8 @@ export function DataProvider({ children }) {
         shopItems: shopItemsRes.data || [],
         wheelRewards: wheelRewardsRes.data || [],
       });
-    } catch (error) {
-      console.error("Error loading data:", error);
+    } catch {
+      // Error loading data
     } finally {
       setLoading(false);
     }
@@ -64,8 +64,8 @@ export function DataProvider({ children }) {
       }));
 
       return { success: true, data };
-    } catch (error) {
-      console.error("Error adding character:", error);
+    } catch {
+      // Error adding character
       return { success: false, error: error.message };
     }
   };
@@ -90,8 +90,8 @@ export function DataProvider({ children }) {
       }));
 
       return { success: true, data };
-    } catch (error) {
-      console.error("Error updating character:", error);
+    } catch {
+      // Error updating character
       return { success: false, error: error.message };
     }
   };
@@ -111,8 +111,8 @@ export function DataProvider({ children }) {
       }));
 
       return { success: true };
-    } catch (error) {
-      console.error("Error removing character:", error);
+    } catch {
+      // Error removing character
       return { success: false, error: error.message };
     }
   };
@@ -139,8 +139,8 @@ export function DataProvider({ children }) {
       }));
 
       return { success: true, data };
-    } catch (error) {
-      console.error("Error adding OC package:", error);
+    } catch {
+      // Error adding OC package
       return { success: false, error: error.message };
     }
   };
@@ -167,8 +167,8 @@ export function DataProvider({ children }) {
       }));
 
       return { success: true, data };
-    } catch (error) {
-      console.error("Error updating OC package:", error);
+    } catch {
+      // Error updating OC package
       return { success: false, error: error.message };
     }
   };
@@ -188,8 +188,8 @@ export function DataProvider({ children }) {
       }));
 
       return { success: true };
-    } catch (error) {
-      console.error("Error removing OC package:", error);
+    } catch {
+      // Error removing OC package
       return { success: false, error: error.message };
     }
   };
@@ -219,8 +219,8 @@ export function DataProvider({ children }) {
       }));
 
       return { success: true, data };
-    } catch (error) {
-      console.error("Error adding shop item:", error);
+    } catch {
+      // Error adding shop item
       return { success: false, error: error.message };
     }
   };
@@ -250,8 +250,8 @@ export function DataProvider({ children }) {
       }));
 
       return { success: true, data };
-    } catch (error) {
-      console.error("Error updating shop item:", error);
+    } catch {
+      // Error updating shop item
       return { success: false, error: error.message };
     }
   };
@@ -271,8 +271,8 @@ export function DataProvider({ children }) {
       }));
 
       return { success: true };
-    } catch (error) {
-      console.error("Error removing shop item:", error);
+    } catch {
+      // Error removing shop item
       return { success: false, error: error.message };
     }
   };
@@ -298,8 +298,8 @@ export function DataProvider({ children }) {
       }));
 
       return { success: true, data };
-    } catch (error) {
-      console.error("Error adding wheel reward:", error);
+    } catch {
+      // Error adding wheel reward
       return { success: false, error: error.message };
     }
   };
@@ -325,8 +325,8 @@ export function DataProvider({ children }) {
       }));
 
       return { success: true, data };
-    } catch (error) {
-      console.error("Error updating wheel reward:", error);
+    } catch {
+      // Error updating wheel reward
       return { success: false, error: error.message };
     }
   };
@@ -346,45 +346,56 @@ export function DataProvider({ children }) {
       }));
 
       return { success: true };
-    } catch (error) {
-      console.error("Error removing wheel reward:", error);
+    } catch {
+      // Error removing wheel reward
       return { success: false, error: error.message };
     }
   };
 
-  // File upload helper: Upload to Supabase Storage
+  // File upload helper: Optimized for speed - use data URL directly
   const uploadFile = async (file) => {
     if (!file) return "";
 
+    // For faster uploads, convert directly to data URL
+    // This is instant and works reliably
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result?.toString() || "");
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    // Optional: If you want to try Supabase Storage first but with timeout
+    /*
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-      const filePath = `uploads/${fileName}`;
+      // Set a timeout for Supabase upload
+      const uploadPromise = new Promise(async (resolve, reject) => {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const filePath = `uploads/${fileName}`;
 
-      const { error } = await supabase.storage
-        .from('images') // Make sure this bucket exists in Supabase
-        .upload(filePath, file);
+        const { error } = await supabase.storage
+          .from('images')
+          .upload(filePath, file);
 
-      if (error) {
-        console.error("File upload error:", error);
-        // Fallback to data URL for development
-        return new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result?.toString() || "");
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-      }
+        if (error) throw error;
 
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('images')
-        .getPublicUrl(filePath);
+        const { data: { publicUrl } } = supabase.storage
+          .from('images')
+          .getPublicUrl(filePath);
 
-      return publicUrl;
+        resolve(publicUrl);
+      });
+
+      // Race between upload and timeout (3 seconds)
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Upload timeout')), 3000)
+      );
+
+      return await Promise.race([uploadPromise, timeoutPromise]);
     } catch (error) {
-      console.error("File upload failed:", error);
-      // Fallback to data URL for development
+      // Using data URL fallback for faster upload
+      // Fast fallback to data URL
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result?.toString() || "");
@@ -392,6 +403,7 @@ export function DataProvider({ children }) {
         reader.readAsDataURL(file);
       });
     }
+    */
   };
 
   const value = useMemo(

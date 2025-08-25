@@ -26,6 +26,7 @@ export default function Login() {
   const [signupPassword, setSignupPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [signupError, setSignupError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -40,6 +41,7 @@ export default function Login() {
   const handleSignup = async (e) => {
     e.preventDefault();
     setSignupError("");
+    setSuccessMessage("");
     if (signupPassword !== confirmPassword) {
       setSignupError("Passwords do not match");
       return;
@@ -47,8 +49,15 @@ export default function Login() {
     const res = await register({ name, email: signupEmail, password: signupPassword });
     if (!res.ok) {
       setSignupError(res.error || "Registration failed");
+    } else if (res.requiresConfirmation) {
+      // Show success message and clear form
+      setSuccessMessage(res.message);
+      setName("");
+      setSignupEmail("");
+      setSignupPassword("");
+      setConfirmPassword("");
     }
-    // Navigation will be handled by useEffect when auth state updates
+    // Navigation will be handled by useEffect when auth state updates (if no confirmation required)
   };
 
   return (
@@ -71,6 +80,7 @@ export default function Login() {
       confirmPassword={confirmPassword}
       setConfirmPassword={setConfirmPassword}
       signupError={signupError}
+      successMessage={successMessage}
     />
   );
 }

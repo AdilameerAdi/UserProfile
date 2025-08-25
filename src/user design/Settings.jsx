@@ -72,7 +72,7 @@ export default function Settings() {
         setSavedRecoveryEmail(data.recovery_email);
         setRecoveryEmail(data.recovery_email);
       }
-    } catch (err) {
+    } catch {
       // Silent fail - recovery email is optional
     }
   };
@@ -476,7 +476,7 @@ export default function Settings() {
                           setSavedRecoveryEmail(data.recovery_email);
                           setShowRecoveryForm(false);
                         }
-                      } catch (err) {
+                      } catch {
                         setRecovErr("An error occurred. Please try again.");
                       }
                     }}

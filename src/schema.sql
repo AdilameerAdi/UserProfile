@@ -227,6 +227,70 @@ ALTER TABLE public.wheel_rewards DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.oc_packages DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.shop_items DISABLE ROW LEVEL SECURITY;
 
+-- ============================================================
+-- ADMIN NOTIFICATIONS SYSTEM
+-- ============================================================
+
+-- User registrations tracking for admin notifications
+CREATE TABLE IF NOT EXISTS public.user_registrations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_email TEXT NOT NULL,
+  user_name TEXT,
+  registered_at TIMESTAMPTZ DEFAULT NOW(),
+  is_read BOOLEAN DEFAULT FALSE,
+  read_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  read_at TIMESTAMPTZ
+);
+
+-- Disable RLS for admin access
+ALTER TABLE public.user_registrations DISABLE ROW LEVEL SECURITY;
+
+-- Function to automatically create notification when user registers
+CREATE OR REPLACE FUNCTION public.handle_user_registration_notification()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Insert notification for new user registration
+  INSERT INTO public.user_registrations (user_id, user_email, user_name)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email)
+  );
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Trigger to create notification on user registration
+DROP TRIGGER IF EXISTS on_user_registration_notification ON auth.users;
+CREATE TRIGGER on_user_registration_notification
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_user_registration_notification();
+
+-- Function to mark notifications as read
+CREATE OR REPLACE FUNCTION public.mark_notifications_read(notification_ids UUID[])
+RETURNS BOOLEAN AS $$
+BEGIN
+  UPDATE public.user_registrations 
+  SET is_read = true, read_by = auth.uid(), read_at = NOW()
+  WHERE id = ANY(notification_ids) AND is_read = false;
+  
+  RETURN true;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to get unread notification count
+CREATE OR REPLACE FUNCTION public.get_unread_notification_count()
+RETURNS INTEGER AS $$
+BEGIN
+  RETURN (
+    SELECT COUNT(*) 
+    FROM public.user_registrations 
+    WHERE is_read = false
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- Update triggers for updated_at columns
 CREATE OR REPLACE FUNCTION public.update_updated_at_column()
 RETURNS TRIGGER AS $$

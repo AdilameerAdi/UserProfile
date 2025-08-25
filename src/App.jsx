@@ -1,10 +1,12 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./signup/AuthContext";
+import { NotificationProvider } from "./context/NotificationContext";
 import ProtectedRoute from "./signup/ProtectedRoute";
 import Login from "./signup/Login";
 
 import Layout from "./user design/Layout";
 import Navbar from "./user design/navbar";
+import AdminLayout from "./admin/AdminLayout";
 
 // Main Pages
 import Home from "./user design/home";
@@ -22,13 +24,26 @@ import Settings from "./user design/Settings";
 import PurchaseOC from "./user design/PurchaseOC";
 import Shop from "./user design/Shop";
 import FortuneWheel from "./user design/FortuneWheel";
-import AdminWithSettings from "./admin/AdminWithSettings";
+import Admin from "./admin/Admin";
+
 import { useAuth } from "./signup/AuthContext";
+import { useState } from "react";
+
 function AdminRoute({ children }) {
   const { isAuthenticated, isAdmin } = useAuth();
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (!isAdmin) return <Navigate to="/" replace />;
   return children;
+}
+
+function AdminWithLayout() {
+  const [activeTab, setActiveTab] = useState("characters");
+  
+  return (
+    <AdminLayout activeTab={activeTab} setActiveTab={setActiveTab}>
+      <Admin activeTab={activeTab} setActiveTab={setActiveTab} />
+    </AdminLayout>
+  );
 }
 
 export default function App() {
@@ -44,8 +59,9 @@ export default function App() {
             path="/admin"
             element={
               <AdminRoute>
-                <Navbar />
-                <AdminWithSettings />
+                <NotificationProvider>
+                  <AdminWithLayout />
+                </NotificationProvider>
               </AdminRoute>
             }
           />
