@@ -12,12 +12,16 @@ const DataContext = createContext();
 
 export function DataProvider({ children }) {
   const [store, setStore] = useState(defaultData);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false);
 
-  // Load initial data from database
+  // Don't load data automatically - wait for admin panel to request it
   useEffect(() => {
-    loadAllData();
-  }, []);
+    // Only load if not already loaded and in admin context
+    if (window.location.pathname.includes('/admin') && !dataLoaded) {
+      loadAllData();
+    }
+  }, [dataLoaded]);
 
   const loadAllData = async () => {
     try {
@@ -37,6 +41,7 @@ export function DataProvider({ children }) {
         shopItems: shopItemsRes.data || [],
         wheelRewards: wheelRewardsRes.data || [],
       });
+      setDataLoaded(true);
     } catch {
       // Error loading data
     } finally {

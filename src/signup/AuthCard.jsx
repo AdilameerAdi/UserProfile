@@ -1,5 +1,4 @@
-import { useState } from "react";
-import loginback from "../img/loginback.png";
+import { useState, useEffect } from "react";
 import logo from "../img/logo.png";
 import ProfilePictureSelector from "./ProfilePictureSelector";
 
@@ -28,12 +27,20 @@ export default function AuthCard({
   onCustomProfilePictureUpload,
 }) {
   const [isLogin, setIsLogin] = useState(true);
+  const [bgImage, setBgImage] = useState("");
+
+  // Lazy load the background image
+  useEffect(() => {
+    import("../img/loginback.png").then(module => {
+      setBgImage(module.default);
+    });
+  }, []);
 
   return (
     <div
-      className="min-h-screen w-full bg-cover bg-center flex items-center justify-center"
+      className="min-h-screen w-full bg-cover bg-center flex items-center justify-center bg-gray-900"
       style={{
-        backgroundImage: `url(${loginback})`,
+        backgroundImage: bgImage ? `url(${bgImage})` : 'none',
       }}
     >
       <div className="bg-[#1E2939] bg-opacity-80 rounded-2xl shadow-2xl p-8 w-full max-w-md flex flex-col items-center">

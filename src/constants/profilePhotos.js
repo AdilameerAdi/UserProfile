@@ -1,4 +1,4 @@
-// Import sample photos
+// Import all profile photos statically to avoid dynamic import issues
 import photo1 from "../user design/profile photo/1.png";
 import photo2 from "../user design/profile photo/2.png";
 import photo3 from "../user design/profile photo/3.png";
@@ -15,21 +15,30 @@ import photo14 from "../user design/profile photo/14.png";
 import photo15 from "../user design/profile photo/15.png";
 import photo16 from "../user design/profile photo/16.png";
 
-// Convert relative paths to absolute URLs for the current environment
+// Convert relative paths to absolute URLs
 const convertToAbsoluteURL = (relativePath) => {
   if (relativePath.startsWith('http')) {
-    return relativePath; // Already absolute
+    return relativePath;
   }
-  // Convert to proper URL based on current location
   return new URL(relativePath, window.location.origin).href;
 };
 
-export const PROFILE_PHOTOS = [
+// Profile photos array
+const profilePhotosArray = [
   photo1, photo2, photo3, photo4,
   photo5, photo6, photo8,
   photo9, photo10, photo11, photo12,
   photo13, photo14, photo15, photo16
 ].map(convertToAbsoluteURL);
+
+// Export for immediate use
+export const PROFILE_PHOTOS = profilePhotosArray;
+
+// Async loader for backwards compatibility with lazy loading components
+export const loadProfilePhotos = async () => {
+  // Return immediately since photos are already loaded
+  return Promise.resolve(profilePhotosArray);
+};
 
 
 // Default Dicebear avatars (existing)

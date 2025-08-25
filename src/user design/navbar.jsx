@@ -37,6 +37,10 @@ function Navbar() {
               style={{
                 borderColor: theme.navbarCoinsBorder || "rgba(59, 130, 246, 0.5)",
               }}
+              loading="lazy"
+              onError={(e) => {
+                e.target.style.display = 'none';
+              }}
             />
             <span className="hidden sm:block font-medium text-sm">
               {currentUser.name}

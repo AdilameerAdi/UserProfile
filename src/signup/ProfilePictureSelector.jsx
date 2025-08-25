@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { DEFAULT_AVATARS, PROFILE_PHOTOS } from "../constants/profilePhotos";
+import { useState, useEffect } from "react";
+import { DEFAULT_AVATARS, loadProfilePhotos } from "../constants/profilePhotos";
 
 export default function ProfilePictureSelector({ 
   selectedPicture, 
@@ -7,6 +7,16 @@ export default function ProfilePictureSelector({
   onCustomUpload 
 }) {
   const [uploadPreview, setUploadPreview] = useState("");
+  const [profilePhotos, setProfilePhotos] = useState([]);
+  const [photosLoading, setPhotosLoading] = useState(true);
+
+  // Load profile photos on component mount
+  useEffect(() => {
+    loadProfilePhotos().then(photos => {
+      setProfilePhotos(photos);
+      setPhotosLoading(false);
+    });
+  }, []);
 
   const handleFileSelect = (event) => {
     const file = event.target.files?.[0];
@@ -79,24 +89,31 @@ export default function ProfilePictureSelector({
       <div>
         <h4 className="text-sm font-medium text-gray-300 mb-3">Or choose from profile photos:</h4>
         <div className="grid grid-cols-4 gap-3 mb-4 max-h-48 overflow-y-auto">
-          {PROFILE_PHOTOS.map((photoUrl, index) => (
-            <button
-              key={`photo-${index}`}
-              type="button"
-              onClick={() => handleAvatarSelect(photoUrl)}
-              className={`w-16 h-16 rounded-lg border-2 transition-all duration-200 hover:scale-105 ${
-                selectedPicture === photoUrl && !uploadPreview
-                  ? "border-blue-500 ring-2 ring-blue-300"
-                  : "border-gray-600 hover:border-gray-400"
-              }`}
-            >
-              <img
-                src={photoUrl}
-                alt={`Photo ${index + 1}`}
-                className="w-full h-full rounded-lg object-cover"
-              />
-            </button>
-          ))}
+          {photosLoading ? (
+            <div className="col-span-4 flex justify-center py-4">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+            </div>
+          ) : (
+            profilePhotos.map((photoUrl, index) => (
+              <button
+                key={`photo-${index}`}
+                type="button"
+                onClick={() => handleAvatarSelect(photoUrl)}
+                className={`w-16 h-16 rounded-lg border-2 transition-all duration-200 hover:scale-105 ${
+                  selectedPicture === photoUrl && !uploadPreview
+                    ? "border-blue-500 ring-2 ring-blue-300"
+                    : "border-gray-600 hover:border-gray-400"
+                }`}
+              >
+                <img
+                  src={photoUrl}
+                  alt={`Photo ${index + 1}`}
+                  className="w-full h-full rounded-lg object-cover"
+                  loading="lazy"
+                />
+              </button>
+            ))
+          )}
         </div>
       </div>
 

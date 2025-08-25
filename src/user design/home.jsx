@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { FaEdit, FaImage } from "react-icons/fa";
 import { useAuth } from "../signup/AuthContext";
 
-import { PROFILE_PHOTOS, DEFAULT_AVATARS } from "../constants/profilePhotos";
+import { loadProfilePhotos, DEFAULT_AVATARS } from "../constants/profilePhotos";
 
 export default function Home() {
   const { currentUser, updateProfileName, updateProfilePicture } = useAuth();
@@ -14,9 +14,22 @@ export default function Home() {
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [savingName, setSavingName] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [profilePhotos, setProfilePhotos] = useState([]);
+  const [photosLoading, setPhotosLoading] = useState(false);
 
   // Combine both avatar types for selection
-  const allPhotos = useMemo(() => [...DEFAULT_AVATARS, ...PROFILE_PHOTOS], []);
+  const allPhotos = useMemo(() => [...DEFAULT_AVATARS, ...profilePhotos], [profilePhotos]);
+
+  // Load profile photos only when gallery is opened
+  useEffect(() => {
+    if (isGalleryOpen && profilePhotos.length === 0 && !photosLoading) {
+      setPhotosLoading(true);
+      loadProfilePhotos().then(photos => {
+        setProfilePhotos(photos);
+        setPhotosLoading(false);
+      });
+    }
+  }, [isGalleryOpen, profilePhotos.length, photosLoading]);
 
   // Sync from auth user
   useEffect(() => {
@@ -78,6 +91,11 @@ export default function Home() {
               src={profilePhoto}
               alt="Profile"
               className="w-28 h-28 rounded-full object-cover border-4 border-blue-400 shadow-md"
+              loading="lazy"
+              onError={(e) => {
+                // Fallback to first default avatar if image fails to load
+                e.target.src = DEFAULT_AVATARS[0];
+              }}
             />
           </div>
 
