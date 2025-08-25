@@ -1,11 +1,12 @@
 import { useState, useContext, useEffect } from "react";
 import { ThemeContext } from "../context/ThemeContext";
 import { useAuth } from "../signup/AuthContext";
-import { supabase } from "../supabaseClient"; // make sure the path is correct
+import { supabase } from "../supabaseClient";
+import ProfilePictureSelector from "../signup/ProfilePictureSelector";
 
 export default function Settings() {
   const { theme, switchTheme, currentThemeName } = useContext(ThemeContext);
-  const { currentUser: authUser, updateEmail, updatePassword } = useAuth();
+  const { currentUser: authUser, updateEmail, updatePassword, updateProfileName, updateProfilePicture } = useAuth();
   const [currentUser, setCurrentUser] = useState(authUser || null);
 
   const [recoveryEmail, setRecoveryEmail] = useState("");
@@ -33,6 +34,19 @@ export default function Settings() {
   const [passMsg, setPassMsg] = useState("");
   const [passErr, setPassErr] = useState("");
 
+  // Profile picture states
+  const [selectedProfilePicture, setSelectedProfilePicture] = useState("");
+  const [profilePictureFile, setProfilePictureFile] = useState(null);
+  const [showProfilePictureForm, setShowProfilePictureForm] = useState(false);
+  const [profilePictureMsg, setProfilePictureMsg] = useState("");
+  const [profilePictureErr, setProfilePictureErr] = useState("");
+
+  // Username states  
+  const [newUsername, setNewUsername] = useState("");
+  const [showUsernameForm, setShowUsernameForm] = useState(false);
+  const [usernameMsg, setUsernameMsg] = useState("");
+  const [usernameErr, setUsernameErr] = useState("");
+
   useEffect(() => {
     try {
       const saved = localStorage.getItem("appThemeName_v1");
@@ -54,6 +68,7 @@ export default function Settings() {
   useEffect(() => {
     if (authUser?.id) {
       setCurrentUser(authUser);
+      setSelectedProfilePicture(authUser.profilePicture || "");
       fetchRecoveryEmail();
     }
   }, [authUser]);
@@ -123,6 +138,57 @@ export default function Settings() {
     setConfirmPass("");
   };
 
+  const handleProfilePictureSelect = (pictureUrl) => {
+    setSelectedProfilePicture(pictureUrl);
+    setProfilePictureFile(null); // Clear file if URL is selected
+  };
+
+  const handleCustomProfilePictureUpload = (file, dataUrl) => {
+    setSelectedProfilePicture(dataUrl);
+    setProfilePictureFile(file);
+  };
+
+  const submitProfilePictureChange = async () => {
+    setProfilePictureMsg("");
+    setProfilePictureErr("");
+    
+    if (!selectedProfilePicture) {
+      setProfilePictureErr("Please select a profile picture");
+      return;
+    }
+
+    try {
+      const res = await updateProfilePicture(selectedProfilePicture, profilePictureFile);
+      if (!res.ok) {
+        setProfilePictureErr(res.error || "Failed to update profile picture");
+        return;
+      }
+      setProfilePictureMsg("Profile picture updated successfully");
+      setShowProfilePictureForm(false);
+    } catch {
+      setProfilePictureErr("Failed to update profile picture");
+    }
+  };
+
+  const submitUsernameChange = async () => {
+    setUsernameMsg("");
+    setUsernameErr("");
+    
+    if (!newUsername || newUsername.trim().length < 2) {
+      setUsernameErr("Username must be at least 2 characters");
+      return;
+    }
+
+    const res = await updateProfileName(newUsername.trim());
+    if (!res.ok) {
+      setUsernameErr(res.error || "Failed to update username");
+      return;
+    }
+    setUsernameMsg("Username updated successfully");
+    setShowUsernameForm(false);
+    setNewUsername("");
+  };
+
   const getBg = (color) => theme[color] || color;
 
   return (
@@ -168,6 +234,172 @@ export default function Settings() {
             <h2 className="text-2xl sm:text-3xl font-bold mb-6">
               Account Settings
             </h2>
+
+            {/* Profile Picture Section */}
+            <div className="mb-6">
+              <p className="mb-2" style={{ color: getBg("subText") }}>
+                Current Profile Picture:
+              </p>
+              <div className="flex items-center gap-4 mb-4">
+                {currentUser?.profilePicture ? (
+                  <img
+                    src={currentUser.profilePicture}
+                    alt="Current profile"
+                    className="w-16 h-16 rounded-full object-cover border-2"
+                    style={{ borderColor: getBg("inputBorder") }}
+                  />
+                ) : (
+                  <div
+                    className="w-16 h-16 rounded-full border-2 flex items-center justify-center"
+                    style={{ borderColor: getBg("inputBorder"), backgroundColor: getBg("inputBg") }}
+                  >
+                    <span className="text-2xl">👤</span>
+                  </div>
+                )}
+                <button
+                  onClick={() => {
+                    setShowProfilePictureForm(true);
+                    setProfilePictureMsg("");
+                    setProfilePictureErr("");
+                  }}
+                  className="px-4 py-2 rounded-lg transition-colors duration-300"
+                  style={{
+                    backgroundColor: getBg("primary"),
+                    color: getBg("buttonText"),
+                  }}
+                >
+                  Change Picture
+                </button>
+              </div>
+
+              {showProfilePictureForm && (
+                <div className="p-4 rounded-lg border mb-4" style={{ backgroundColor: getBg("inputBg"), borderColor: getBg("inputBorder") }}>
+                  <ProfilePictureSelector
+                    selectedPicture={selectedProfilePicture}
+                    onPictureSelect={handleProfilePictureSelect}
+                    onCustomUpload={handleCustomProfilePictureUpload}
+                  />
+                  <div className="flex gap-2 mt-4">
+                    <button
+                      onClick={submitProfilePictureChange}
+                      className="px-4 py-2 rounded-lg transition-colors duration-300"
+                      style={{
+                        backgroundColor: getBg("primary"),
+                        color: getBg("buttonText"),
+                      }}
+                    >
+                      Update Picture
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowProfilePictureForm(false);
+                        setSelectedProfilePicture(currentUser?.profilePicture || "");
+                        setProfilePictureFile(null);
+                      }}
+                      className="px-4 py-2 rounded-lg transition-colors duration-300"
+                      style={{
+                        backgroundColor: getBg("secondary"),
+                        color: getBg("textColor"),
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {profilePictureMsg && (
+                <p className="text-green-500 text-sm mb-2">{profilePictureMsg}</p>
+              )}
+              {profilePictureErr && (
+                <p className="text-red-500 text-sm mb-2">{profilePictureErr}</p>
+              )}
+            </div>
+
+            {/* Username Section */}
+            <div className="mb-6">
+              <p className="mb-2" style={{ color: getBg("subText") }}>
+                Current Username:
+              </p>
+              <div className="flex items-center gap-4 mb-4">
+                <input
+                  type="text"
+                  value={currentUser?.name || ""}
+                  disabled
+                  className="flex-1 px-4 py-2 rounded-lg text-sm sm:text-base transition-colors duration-300 border"
+                  style={{
+                    backgroundColor: getBg("inputBg"),
+                    borderColor: getBg("inputBorder"),
+                    color: getBg("inputText"),
+                  }}
+                />
+                <button
+                  onClick={() => {
+                    setShowUsernameForm(true);
+                    setNewUsername(currentUser?.name || "");
+                    setUsernameMsg("");
+                    setUsernameErr("");
+                  }}
+                  className="px-4 py-2 rounded-lg transition-colors duration-300"
+                  style={{
+                    backgroundColor: getBg("primary"),
+                    color: getBg("buttonText"),
+                  }}
+                >
+                  Change Username
+                </button>
+              </div>
+
+              {showUsernameForm && (
+                <div className="mb-4">
+                  <input
+                    type="text"
+                    placeholder="Enter new username"
+                    value={newUsername}
+                    onChange={(e) => setNewUsername(e.target.value)}
+                    className="w-full px-4 py-2 rounded-lg text-sm sm:text-base transition-colors duration-300 border mb-2"
+                    style={{
+                      backgroundColor: getBg("inputBg"),
+                      borderColor: getBg("inputBorder"),
+                      color: getBg("inputText"),
+                    }}
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={submitUsernameChange}
+                      className="px-4 py-2 rounded-lg transition-colors duration-300"
+                      style={{
+                        backgroundColor: getBg("primary"),
+                        color: getBg("buttonText"),
+                      }}
+                    >
+                      Update Username
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowUsernameForm(false);
+                        setNewUsername("");
+                      }}
+                      className="px-4 py-2 rounded-lg transition-colors duration-300"
+                      style={{
+                        backgroundColor: getBg("secondary"),
+                        color: getBg("textColor"),
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {usernameMsg && (
+                <p className="text-green-500 text-sm mb-2">{usernameMsg}</p>
+              )}
+              {usernameErr && (
+                <p className="text-red-500 text-sm mb-2">{usernameErr}</p>
+              )}
+            </div>
+
             {/* Current Info */}
             <div className="mb-6">
               <p className="mb-2" style={{ color: getBg("subText") }}>

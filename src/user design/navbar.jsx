@@ -5,7 +5,7 @@ import logo from "../img/logo.png"; // 🔹 Import your logo image
 
 function Navbar() {
   const { theme } = useContext(ThemeContext);
-  const { logout } = useAuth();
+  const { logout, currentUser } = useAuth();
 
   return (
     <div
@@ -25,8 +25,40 @@ function Navbar() {
         />
       </div>
 
-      {/* Right Section (Coins + Admin + Sign Out) */}
+      {/* Right Section (Profile + Coins + Sign Out) */}
       <div className="flex items-center gap-4">
+        {/* User Profile Picture */}
+        {currentUser?.profilePicture && (
+          <div className="flex items-center gap-2">
+            <img
+              src={currentUser.profilePicture}
+              alt="Profile"
+              className="w-8 h-8 rounded-full border-2"
+              style={{
+                borderColor: theme.navbarCoinsBorder || "rgba(59, 130, 246, 0.5)",
+              }}
+            />
+            <span className="hidden sm:block font-medium text-sm">
+              {currentUser.name}
+            </span>
+          </div>
+        )}
+
+        {/* Coins Display */}
+        <div 
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg shadow-md"
+          style={{
+            background: theme.navbarCoinsBackground || "rgba(59, 130, 246, 0.2)",
+            color: theme.navbarTextColor || "#E5E7EB",
+            border: `1px solid ${theme.navbarCoinsBorder || "rgba(59, 130, 246, 0.5)"}`,
+          }}
+        >
+          <span className="text-yellow-400 text-lg">🪙</span>
+          <span className="font-semibold text-sm sm:text-base">
+            {currentUser?.coins !== undefined ? Number(currentUser.coins).toLocaleString() : '0'}
+          </span>
+        </div>
+
         {/* Sign Out */}
         <button
           onClick={() => logout()}

@@ -2,6 +2,7 @@ import AuthCard from "./AuthCard";
 import { useAuth } from "./AuthContext";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { DEFAULT_AVATARS } from "../constants/profilePhotos";
 
 export default function Login() {
   const { loginCredentials, register, isAuthenticated, isAdmin: isAdminRole } = useAuth();
@@ -27,6 +28,8 @@ export default function Login() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [signupError, setSignupError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [selectedProfilePicture, setSelectedProfilePicture] = useState(DEFAULT_AVATARS[0]);
+  const [profilePictureFile, setProfilePictureFile] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -46,7 +49,15 @@ export default function Login() {
       setSignupError("Passwords do not match");
       return;
     }
-    const res = await register({ name, email: signupEmail, password: signupPassword });
+    
+    const res = await register({ 
+      name, 
+      email: signupEmail, 
+      password: signupPassword, 
+      profilePicture: selectedProfilePicture,
+      profilePictureFile: profilePictureFile 
+    });
+    
     if (!res.ok) {
       setSignupError(res.error || "Registration failed");
     } else if (res.requiresConfirmation) {
@@ -56,8 +67,20 @@ export default function Login() {
       setSignupEmail("");
       setSignupPassword("");
       setConfirmPassword("");
+      setSelectedProfilePicture(DEFAULT_AVATARS[0]);
+      setProfilePictureFile(null);
     }
     // Navigation will be handled by useEffect when auth state updates (if no confirmation required)
+  };
+
+  const handleProfilePictureSelect = (pictureUrl) => {
+    setSelectedProfilePicture(pictureUrl);
+    setProfilePictureFile(null); // Clear file if URL is selected
+  };
+
+  const handleCustomProfilePictureUpload = (file, dataUrl) => {
+    setSelectedProfilePicture(dataUrl);
+    setProfilePictureFile(file);
   };
 
   return (
@@ -81,6 +104,9 @@ export default function Login() {
       setConfirmPassword={setConfirmPassword}
       signupError={signupError}
       successMessage={successMessage}
+      selectedProfilePicture={selectedProfilePicture}
+      onProfilePictureSelect={handleProfilePictureSelect}
+      onCustomProfilePictureUpload={handleCustomProfilePictureUpload}
     />
   );
 }

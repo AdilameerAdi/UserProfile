@@ -1,6 +1,7 @@
 import { useState } from "react";
 import loginback from "../img/loginback.png";
 import logo from "../img/logo.png";
+import ProfilePictureSelector from "./ProfilePictureSelector";
 
 export default function AuthCard({
   onSubmit,
@@ -22,6 +23,9 @@ export default function AuthCard({
   setConfirmPassword,
   signupError,
   successMessage,
+  selectedProfilePicture,
+  onProfilePictureSelect,
+  onCustomProfilePictureUpload,
 }) {
   const [isLogin, setIsLogin] = useState(true);
 
@@ -161,6 +165,16 @@ export default function AuthCard({
               onChange={(e) => setConfirmPassword?.(e.target.value)}
               required
             />
+
+            {/* Profile Picture Selection */}
+            <div className="bg-gray-800 p-4 rounded-lg border border-gray-600">
+              <ProfilePictureSelector
+                selectedPicture={selectedProfilePicture}
+                onPictureSelect={onProfilePictureSelect}
+                onCustomUpload={onCustomProfilePictureUpload}
+              />
+            </div>
+
             {signupError && (
               <p className="text-red-500 text-sm">{signupError}</p>
             )}

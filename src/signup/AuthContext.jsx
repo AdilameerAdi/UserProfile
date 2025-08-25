@@ -59,40 +59,30 @@ export function AuthProvider({ children }) {
 				return;
 			}
 			
-			// Set authenticated state immediately for faster UI
+			// Set loading state first
+			setAuthState({ isAuthenticated: false, role: "user", currentUser: null, isLoading: true });
+			
+			// Clear cache and fetch fresh profile data during login
+			profileCache.delete(nextUser.id);
+			const profile = await fetchUserProfile(nextUser.id);
+			
+			// Ensure proper role assignment - only true admin accounts should have admin role
+			const isUserAdmin = profile?.is_admin === true;
+			
+			// Set authenticated state with complete profile data
 			setAuthState({
 				isAuthenticated: true,
-				role: "user", // Default to user, will update if admin
+				role: isUserAdmin ? "admin" : "user",
 				currentUser: {
 					id: nextUser.id,
-					name: nextUser.user_metadata?.name || nextUser.email?.split("@")[0] || "User",
+					name: profile?.full_name || nextUser.user_metadata?.name || nextUser.email?.split("@")[0] || "User",
 					email: nextUser.email || "",
-					role: "user",
+					profilePicture: profile?.profile_picture,
+					coins: profile?.coins || 0,
+					role: isUserAdmin ? "admin" : "user",
 				},
 				isLoading: false,
 			});
-
-			// Fetch profile in background and update if needed
-			const profile = await fetchUserProfile(nextUser.id);
-			if (profile?.is_admin) {
-				setAuthState(prev => ({
-					...prev,
-					role: "admin",
-					currentUser: {
-						...prev.currentUser,
-						name: profile.full_name || prev.currentUser.name,
-						role: "admin",
-					}
-				}));
-			} else if (profile?.full_name) {
-				setAuthState(prev => ({
-					...prev,
-					currentUser: {
-						...prev.currentUser,
-						name: profile.full_name,
-					}
-				}));
-			}
 		});
 
 		return () => {
@@ -109,11 +99,14 @@ export function AuthProvider({ children }) {
 
 		const { data, error } = await supabase
 			.from("profiles")
-			.select("id, full_name, is_admin, recovery_email")
+			.select("*")
 			.eq("id", userId)
 			.single();
 		
-		if (error) return null;
+		if (error) {
+			console.error("Database error fetching profile:", error);
+			return null;
+		}
 		
 		// Cache the result
 		profileCache.set(userId, data);
@@ -162,6 +155,20 @@ export function AuthProvider({ children }) {
 								requiresConfirmation: true
 							};
 						}
+						
+						// If admin login was requested, verify the user is actually admin
+						if (isAdmin) {
+							const profile = await fetchUserProfile(user.id);
+							if (!profile?.is_admin) {
+								// Sign them out immediately
+								await supabase.auth.signOut();
+								return { 
+									ok: false, 
+									error: "These credentials are not for an admin account. Please uncheck the admin login option."
+								};
+							}
+						}
+						
 						return { ok: true };
 					}
 				}
@@ -192,6 +199,18 @@ export function AuthProvider({ children }) {
 						});
 						
 						if (primaryLoginData?.user) {
+							// If admin login was requested, verify the user is actually admin
+							if (isAdmin) {
+								const profile = await fetchUserProfile(primaryLoginData.user.id);
+								if (!profile?.is_admin) {
+									// Sign them out immediately
+									await supabase.auth.signOut();
+									return { 
+										ok: false, 
+										error: "These credentials are not for an admin account. Please uncheck the admin login option."
+									};
+								}
+							}
 							return { ok: true };
 						}
 					}
@@ -211,12 +230,25 @@ export function AuthProvider({ children }) {
 		}
 	};
 
-	const register = async ({ name, email, password }) => {
+	const register = async ({ name, email, password, profilePicture, profilePictureFile }) => {
 		if (!name || !email || !password) {
 			return { ok: false, error: "All fields are required" };
 		}
 		
 		try {
+			// Handle profile picture upload if it's a file
+			let finalProfilePicture = profilePicture;
+			
+			if (profilePictureFile) {
+				// Convert file to data URL for instant storage
+				const reader = new FileReader();
+				finalProfilePicture = await new Promise((resolve, reject) => {
+					reader.onload = () => resolve(reader.result);
+					reader.onerror = reject;
+					reader.readAsDataURL(profilePictureFile);
+				});
+			}
+			
 			// Sign up the user with email confirmation required
 			const { data, error } = await supabase.auth.signUp({ 
 				email, 
@@ -234,14 +266,20 @@ export function AuthProvider({ children }) {
 			
 			const user = data?.user || null;
 			
-			// Create or update profile with name (for when they confirm later)
+			// Create or update profile with name and profile picture (for when they confirm later)
 			if (user) {
-				await supabase
+				const { error: profileError } = await supabase
 					.from("profiles")
 					.upsert({ 
 						id: user.id, 
-						full_name: name 
+						full_name: name,
+						profile_picture: finalProfilePicture,
+						is_admin: false  // Explicitly set new users as non-admin
 					});
+				
+				if (profileError) {
+					console.error("Error saving profile:", profileError);
+				}
 			}
 			
 			// Check if email confirmation is required
@@ -257,14 +295,17 @@ export function AuthProvider({ children }) {
 			// If user is already confirmed (in development mode or if confirmations are disabled)
 			if (user && data?.session) {
 				const profile = await fetchUserProfile(user.id);
+				const isUserAdmin = profile?.is_admin === true;
 				setAuthState({
 					isAuthenticated: true,
-					role: profile?.is_admin ? "admin" : "user",
+					role: isUserAdmin ? "admin" : "user",
 					currentUser: {
 						id: user.id,
 						name: profile?.full_name || name,
 						email: user.email || email,
-						role: profile?.is_admin ? "admin" : "user",
+						profilePicture: profile?.profile_picture || finalProfilePicture,
+						coins: profile?.coins || 0,
+						role: isUserAdmin ? "admin" : "user",
 					},
 					isLoading: false,
 				});
@@ -289,6 +330,44 @@ export function AuthProvider({ children }) {
 		return { ok: true };
 	};
 
+	const updateProfilePicture = async (profilePicture, profilePictureFile) => {
+		const userId = authState.currentUser?.id;
+		if (!userId) return { ok: false, error: "No authenticated user" };
+
+		try {
+			// Handle profile picture upload if it's a file
+			let finalProfilePicture = profilePicture;
+			if (profilePictureFile) {
+				// Convert file to data URL for instant storage
+				const reader = new FileReader();
+				finalProfilePicture = await new Promise((resolve, reject) => {
+					reader.onload = () => resolve(reader.result);
+					reader.onerror = reject;
+					reader.readAsDataURL(profilePictureFile);
+				});
+			}
+
+			const { error } = await supabase
+				.from("profiles")
+				.update({ profile_picture: finalProfilePicture })
+				.eq("id", userId);
+
+			if (error) return { ok: false, error: error.message };
+
+			setAuthState((prev) => ({
+				...prev,
+				currentUser: prev.currentUser ? { 
+					...prev.currentUser, 
+					profilePicture: finalProfilePicture 
+				} : prev.currentUser,
+			}));
+
+			return { ok: true };
+		} catch {
+			return { ok: false, error: "Failed to update profile picture" };
+		}
+	};
+
 	const updateEmail = async (newEmail) => {
 		if (!newEmail) return { ok: false, error: "Email required" };
 		const { data, error } = await supabase.auth.updateUser({ email: newEmail });
@@ -308,6 +387,66 @@ export function AuthProvider({ children }) {
 		const { error } = await supabase.auth.updateUser({ password: newPassword });
 		if (error) return { ok: false, error: error.message };
 		return { ok: true };
+	};
+
+	const addCoins = async (coinAmount) => {
+		const userId = authState.currentUser?.id;
+		if (!userId) return { ok: false, error: "No authenticated user" };
+		
+		try {
+			const { error } = await supabase.rpc('add_user_coins', {
+				user_id: userId,
+				coin_amount: coinAmount
+			});
+			
+			if (error) return { ok: false, error: error.message };
+			
+			// Update local state
+			setAuthState(prev => ({
+				...prev,
+				currentUser: prev.currentUser ? {
+					...prev.currentUser,
+					coins: (prev.currentUser.coins || 0) + coinAmount
+				} : prev.currentUser
+			}));
+			
+			return { ok: true };
+		} catch {
+			return { ok: false, error: "Failed to add coins" };
+		}
+	};
+
+	const subtractCoins = async (coinAmount) => {
+		const userId = authState.currentUser?.id;
+		if (!userId) return { ok: false, error: "No authenticated user" };
+		
+		const currentCoins = authState.currentUser?.coins || 0;
+		if (currentCoins < coinAmount) {
+			return { ok: false, error: "Insufficient coins" };
+		}
+		
+		try {
+			const { data, error } = await supabase.rpc('subtract_user_coins', {
+				user_id: userId,
+				coin_amount: coinAmount
+			});
+			
+			if (error) return { ok: false, error: error.message };
+			if (!data) return { ok: false, error: "Insufficient coins" };
+			
+			// Update local state
+			setAuthState(prev => ({
+				...prev,
+				currentUser: prev.currentUser ? {
+					...prev.currentUser,
+					coins: Math.max(0, (prev.currentUser.coins || 0) - coinAmount)
+				} : prev.currentUser
+			}));
+			
+			return { ok: true };
+		} catch {
+			return { ok: false, error: "Failed to subtract coins" };
+		}
 	};
 
 	const logout = async () => {
@@ -342,8 +481,11 @@ export function AuthProvider({ children }) {
 			register,
 			logout,
 			updateProfileName,
+			updateProfilePicture,
 			updateEmail,
 			updatePassword,
+			addCoins,
+			subtractCoins,
 		}),
 		[authState]
 	);

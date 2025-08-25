@@ -5,6 +5,8 @@
 CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   full_name TEXT,
+  profile_picture TEXT, -- URL or data URL for profile picture
+  coins INTEGER DEFAULT 0, -- Users start with 0 coins, earn through purchases
   is_admin BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -316,3 +318,70 @@ FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 CREATE TRIGGER update_wheel_rewards_updated_at 
 BEFORE UPDATE ON public.wheel_rewards
 FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+-- ============================================================
+-- PROFILE PICTURE FEATURE
+-- ============================================================
+
+-- Add profile_picture column if it doesn't exist (for existing databases)
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS profile_picture TEXT;
+
+-- Add coins column if it doesn't exist (for existing databases)
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS coins INTEGER DEFAULT 0;
+
+-- ============================================================
+-- COIN MANAGEMENT FUNCTIONS
+-- ============================================================
+
+-- Function to add coins to user account (when purchasing OC packages)
+CREATE OR REPLACE FUNCTION public.add_user_coins(user_id UUID, coin_amount INTEGER)
+RETURNS BOOLEAN AS $$
+BEGIN
+  UPDATE public.profiles 
+  SET coins = COALESCE(coins, 0) + coin_amount,
+      updated_at = NOW()
+  WHERE id = user_id;
+  
+  RETURN FOUND;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to subtract coins from user account (when purchasing shop items)
+CREATE OR REPLACE FUNCTION public.subtract_user_coins(user_id UUID, coin_amount INTEGER)
+RETURNS BOOLEAN AS $$
+DECLARE
+  current_balance INTEGER;
+BEGIN
+  -- Get current balance
+  SELECT coins INTO current_balance 
+  FROM public.profiles 
+  WHERE id = user_id;
+  
+  -- Check if user has enough coins
+  IF current_balance IS NULL OR current_balance < coin_amount THEN
+    RETURN FALSE;
+  END IF;
+  
+  -- Subtract coins
+  UPDATE public.profiles 
+  SET coins = coins - coin_amount,
+      updated_at = NOW()
+  WHERE id = user_id;
+  
+  RETURN TRUE;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to get user coin balance
+CREATE OR REPLACE FUNCTION public.get_user_coins(user_id UUID)
+RETURNS INTEGER AS $$
+DECLARE
+  user_coins INTEGER;
+BEGIN
+  SELECT coins INTO user_coins 
+  FROM public.profiles 
+  WHERE id = user_id;
+  
+  RETURN COALESCE(user_coins, 0);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;

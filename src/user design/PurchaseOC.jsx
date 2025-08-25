@@ -2,13 +2,16 @@ import { useState, useEffect, useContext } from "react";
 import { FaCoins } from "react-icons/fa";
 import { ThemeContext } from "../context/ThemeContext";
 import { useData } from "../context/DataContext";
+import { useAuth } from "../signup/AuthContext";
 
 export default function PurchaseOC() {
   const { theme } = useContext(ThemeContext);
   const { store } = useData();
+  const { addCoins } = useAuth();
 
   const [selectedPackage, setSelectedPackage] = useState(null);
   const [now, setNow] = useState(Date.now());
+  const [purchasing, setPurchasing] = useState(false);
 
   const packages = store.ocPackages;
 
@@ -27,6 +30,34 @@ export default function PurchaseOC() {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${m}:${s < 10 ? "0" + s : s}`;
+  };
+
+  const handlePurchase = async () => {
+    if (!selectedPackage || purchasing) return;
+
+    const selectedPkg = packages.find(pkg => pkg.id === selectedPackage);
+    if (!selectedPkg) return;
+
+    setPurchasing(true);
+
+    try {
+      // Simulate payment processing
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Add coins to user account
+      const result = await addCoins(selectedPkg.coins);
+      
+      if (result.ok) {
+        alert(`Success! You purchased ${Number(selectedPkg.coins).toLocaleString()} coins for €${Number(selectedPkg.price).toFixed(2)}`);
+        setSelectedPackage(null);
+      } else {
+        alert(`Purchase failed: ${result.error}`);
+      }
+    } catch {
+      alert("Purchase failed. Please try again.");
+    } finally {
+      setPurchasing(false);
+    }
   };
 
   return (
@@ -106,17 +137,18 @@ export default function PurchaseOC() {
       </div>
 
       <button
-        disabled={!selectedPackage}
+        disabled={!selectedPackage || purchasing}
+        onClick={handlePurchase}
         className="w-full md:w-auto px-8 py-3 rounded-lg font-semibold transition-all duration-300"
         style={{
-          background: selectedPackage
+          background: selectedPackage && !purchasing
             ? theme.buttonColor || "linear-gradient(to right, #3B82F6, #6366F1)"
             : theme.disabledButton || "#374151",
           color: theme.buttonTextColor || "#FFFFFF",
-          cursor: selectedPackage ? "pointer" : "not-allowed",
+          cursor: selectedPackage && !purchasing ? "pointer" : "not-allowed",
         }}
       >
-        {selectedPackage ? "Proceed to Payment" : "Select a Package"}
+        {purchasing ? "Processing..." : selectedPackage ? "Buy Now" : "Select a Package"}
       </button>
     </div>
   );

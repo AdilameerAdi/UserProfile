@@ -1,26 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { FaEdit, FaImage } from "react-icons/fa";
 import { useAuth } from "../signup/AuthContext";
 
-// Import sample photos
-import photo1 from "./profile photo/1.png";
-import photo2 from "./profile photo/2.png";
-import photo3 from "./profile photo/3.png";
-import photo4 from "./profile photo/4.png";
-import photo5 from "./profile photo/5.png";
-import photo6 from "./profile photo/6.png";
-import photo8 from "./profile photo/8.png";
-import photo9 from "./profile photo/9.png";
-import photo10 from "./profile photo/10.png";
-import photo11 from "./profile photo/11.png";
-import photo12 from "./profile photo/12.png";
-import photo13 from "./profile photo/13.png";
-import photo14 from "./profile photo/14.png";
-import photo15 from "./profile photo/15.png";
-import photo16 from "./profile photo/16.png";
+import { PROFILE_PHOTOS, DEFAULT_AVATARS } from "../constants/profilePhotos";
 
 export default function Home() {
-  const { currentUser, updateProfileName } = useAuth();
+  const { currentUser, updateProfileName, updateProfilePicture } = useAuth();
   const [userName, setUserName] = useState("John Doe");
   const [email, setEmail] = useState("john.doe@example.com");
   const [isEditingName, setIsEditingName] = useState(false);
@@ -30,26 +15,18 @@ export default function Home() {
   const [savingName, setSavingName] = useState(false);
   const [saveError, setSaveError] = useState("");
 
-  const photos = [
-    photo1, photo2, photo3, photo4,
-    photo5, photo6, photo8,
-    photo9, photo10, photo11, photo12,
-    photo13, photo14, photo15, photo16
-  ];
+  // Combine both avatar types for selection
+  const allPhotos = useMemo(() => [...DEFAULT_AVATARS, ...PROFILE_PHOTOS], []);
 
   // Sync from auth user
   useEffect(() => {
     if (currentUser) {
       setUserName(currentUser.name || "User");
       setEmail(currentUser.email || "");
+      // Use user's actual profile picture or fallback to first photo
+      setProfilePhoto(currentUser.profilePicture || allPhotos[0]);
     }
-  }, [currentUser]);
-
-  // Pick a random avatar initially
-  useEffect(() => {
-    const randomPhoto = photos[Math.floor(Math.random() * photos.length)];
-    setProfilePhoto(randomPhoto);
-  }, []);
+  }, [currentUser, allPhotos]);
 
   const handleSaveName = async () => {
     setSavingName(true);
@@ -72,11 +49,17 @@ export default function Home() {
     setSelectedPhoto(photo);
   };
 
-  const handleSavePhoto = () => {
+  const handleSavePhoto = async () => {
     if (selectedPhoto) {
-      setProfilePhoto(selectedPhoto);
-      setSelectedPhoto(null);
-      setIsGalleryOpen(false);
+      // Update in database
+      const result = await updateProfilePicture(selectedPhoto);
+      if (result.ok) {
+        setProfilePhoto(selectedPhoto);
+        setSelectedPhoto(null);
+        setIsGalleryOpen(false);
+      } else {
+        setSaveError(result.error || "Failed to update profile picture");
+      }
     }
   };
 
@@ -150,7 +133,7 @@ export default function Home() {
           <div className="bg-white p-6 rounded-lg shadow-lg max-w-lg w-full">
             <h2 className="text-xl mb-4 font-semibold text-center">Choose a profile photo</h2>
             <div className="grid grid-cols-4 gap-4 mb-4 max-h-60 overflow-y-auto">
-              {photos.map((photo, index) => (
+              {allPhotos.map((photo, index) => (
                 <img
                   key={index}
                   src={photo}
