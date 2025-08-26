@@ -4,7 +4,6 @@ import { useData } from "../context/DataContext";
 
 export default function Admin({ activeTab, setActiveTab }) {
   const { theme } = useContext(ThemeContext);
-  const [localLoading, setLocalLoading] = useState(false);
   const {
     store,
     loading,
@@ -195,7 +194,8 @@ export default function Admin({ activeTab, setActiveTab }) {
               className="mt-2 px-3 py-1 text-xs rounded"
               style={{ background: theme.buttonColor, color: theme.buttonTextColor }}
               onClick={() => {
-                setLocalLoading(false);
+                // Force refresh data
+                window.location.reload();
               }}
             >
               Skip Loading

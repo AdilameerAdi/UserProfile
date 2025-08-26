@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useMemo, useState } from "react";
 import { supabase } from "../supabaseClient";
 
 const defaultData = {
@@ -536,7 +536,26 @@ export function DataProvider({ children }) {
       removeWheelReward,
       uploadFile,
     }),
-    [store, loading, error]
+    [
+      store, 
+      loading, 
+      error, 
+      loadAllData, 
+      loadDataForTab,
+      addCharacter,
+      updateCharacter,
+      removeCharacter,
+      addOcPackage,
+      updateOcPackage,
+      removeOcPackage,
+      addShopItem,
+      updateShopItem,
+      removeShopItem,
+      addWheelReward,
+      updateWheelReward,
+      removeWheelReward,
+      uploadFile,
+    ]
   );
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

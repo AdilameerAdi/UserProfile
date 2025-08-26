@@ -17,35 +17,38 @@ export function AuthProvider({ children }) {
 	// Load initial session and subscribe to auth changes
 	useEffect(() => {
 		let isMounted = true;
+		
+		// Handle tab visibility changes to prevent state loss
+		const handleVisibilityChange = async () => {
+			if (!document.hidden) {
+				// Tab became visible again, just dispatch a resize event to help with rendering
+				setTimeout(() => {
+					try {
+						window.dispatchEvent(new Event('resize'));
+					} catch (error) {
+						console.error('Error dispatching resize on visibility change:', error);
+					}
+				}, 100);
+			}
+		};
+		
+		document.addEventListener('visibilitychange', handleVisibilityChange);
 
 		const loadSession = async () => {
 			try {
-				// Clear all browser storage related to authentication
-				localStorage.clear();
-				sessionStorage.clear();
-				
-				// Clear profile cache
-				profileCache.clear();
-				
-				// Always clear any existing session on app start
-				await supabase.auth.signOut();
-				
-				if (!isMounted) return;
-				
-				// Always start unauthenticated - force fresh login
-				setAuthState({ isAuthenticated: false, currentUser: null, role: "user", isLoading: false });
-			} catch {
+				// Always start with unauthenticated state to prevent hanging
 				if (isMounted) {
-					// Clear storage even if signOut fails
-					localStorage.clear();
-					sessionStorage.clear();
-					profileCache.clear();
+					setAuthState({ isAuthenticated: false, currentUser: null, role: "user", isLoading: false });
+				}
+			} catch (error) {
+				console.error('Error setting initial state:', error);
+				if (isMounted) {
 					setAuthState({ isAuthenticated: false, currentUser: null, role: "user", isLoading: false });
 				}
 			}
 		};
 
-		// Clear session on app start
+		// Load existing session on app start
 		loadSession();
 
 		// Listen for auth changes (login, logout, etc)
@@ -59,37 +62,67 @@ export function AuthProvider({ children }) {
 				return;
 			}
 			
-			// Set loading state first
-			setAuthState({ isAuthenticated: false, role: "user", currentUser: null, isLoading: true });
-			
-			// Clear cache and fetch fresh profile data during login
-			profileCache.delete(nextUser.id);
-			const profile = await fetchUserProfile(nextUser.id);
-			
-			// Ensure proper role assignment - only true admin accounts should have admin role
-			const isUserAdmin = profile?.is_admin === true;
-			
-			// Set authenticated state with complete profile data
+			// Set authenticated state immediately with basic user info
 			setAuthState({
 				isAuthenticated: true,
-				role: isUserAdmin ? "admin" : "user",
+				role: "user", // Default to user, will update if admin profile found
 				currentUser: {
 					id: nextUser.id,
-					name: profile?.full_name || nextUser.user_metadata?.name || nextUser.email?.split("@")[0] || "User",
+					name: nextUser.user_metadata?.name || nextUser.email?.split("@")[0] || "User",
 					email: nextUser.email || "",
-					profilePicture: profile?.profile_picture,
-					coins: profile?.coins || 0,
-					role: isUserAdmin ? "admin" : "user",
+					profilePicture: null,
+					coins: 0,
+					role: "user",
+					hasRecoveryEmail: false,
+					recoveryEmail: null,
 				},
 				isLoading: false,
 			});
+			
+			// Fetch profile data in background to update user info
+			try {
+				// Clear cache and fetch fresh profile data
+				profileCache.delete(nextUser.id);
+				const profile = await fetchUserProfile(nextUser.id);
+				
+				if (profile) {
+					// Update auth state with profile data
+					const isUserAdmin = profile?.is_admin === true;
+					const hasRecoveryEmail = !!(profile.recovery_email && profile.recovery_email.trim());
+					
+					// If user already has recovery email in database, mark it as completed permanently
+					if (hasRecoveryEmail) {
+						const completedKey = `recovery_email_completed_${nextUser.id}`;
+						localStorage.setItem(completedKey, 'true');
+					}
+					
+					setAuthState(prev => ({
+						...prev,
+						role: isUserAdmin ? "admin" : "user",
+						currentUser: {
+							...prev.currentUser,
+							name: profile.full_name || prev.currentUser.name,
+							profilePicture: profile.profile_picture,
+							coins: profile.coins || 0,
+							role: isUserAdmin ? "admin" : "user",
+							hasRecoveryEmail: hasRecoveryEmail,
+							recoveryEmail: profile.recovery_email || null,
+						}
+					}));
+				}
+			} catch (profileError) {
+				console.error('❌ Error fetching profile (non-blocking):', profileError);
+				// User stays authenticated with basic info
+			}
 		});
 
 		return () => {
 			isMounted = false;
+			document.removeEventListener('visibilitychange', handleVisibilityChange);
 			authListener.subscription.unsubscribe();
 		};
 	}, []);
+
 
 	const fetchUserProfile = async (userId) => {
 		// Check cache first
@@ -97,25 +130,36 @@ export function AuthProvider({ children }) {
 			return profileCache.get(userId);
 		}
 
-		const { data, error } = await supabase
-			.from("profiles")
-			.select("*")
-			.eq("id", userId)
-			.single();
-		
-		if (error) {
-			console.error("Database error fetching profile:", error);
+		try {
+			// Add timeout to prevent hanging
+			const profilePromise = supabase
+				.from("profiles")
+				.select("*")
+				.eq("id", userId)
+				.single();
+			
+			const timeoutPromise = new Promise((_, reject) =>
+				setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
+			);
+			
+			const { data, error } = await Promise.race([profilePromise, timeoutPromise]);
+			
+			if (error) {
+				console.error("Database error fetching profile:", error);
+				return null;
+			}
+			
+			// Cache the result
+			profileCache.set(userId, data);
+			return data;
+		} catch (fetchError) {
+			console.error("Exception in fetchUserProfile:", fetchError);
 			return null;
 		}
-		
-		// Cache the result
-		profileCache.set(userId, data);
-		return data;
 	};
 
 
 	const loginCredentials = async ({ emailOrName, password, isAdmin = false }) => {
-		
 		if (isAdmin) {
 			// Use database admin authentication
 			try {
@@ -153,102 +197,64 @@ export function AuthProvider({ children }) {
 			}
 		}
 
+		// Regular user login
 		try {
-			// Check if input looks like an email format
+			// Validate email format
 			const isValidEmailFormat = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailOrName);
-			
-			if (isValidEmailFormat) {
-				// Try primary email login first (most common case)
-				const loginResult = await supabase.auth.signInWithPassword({ 
-					email: emailOrName, 
-					password: password 
-				});
-				
-				if (!loginResult.error) {
-					// Success with primary email
-					const user = loginResult.data?.user;
-					if (user) {
-						// Check if user is confirmed
-						if (!user.email_confirmed_at) {
-							// Sign them out immediately
-							await supabase.auth.signOut();
-							return { 
-								ok: false, 
-								error: "Please confirm your email before logging in. Check your inbox for the confirmation link.",
-								requiresConfirmation: true
-							};
-						}
-						
-						// If admin login was requested, verify the user is actually admin
-						if (isAdmin) {
-							const profile = await fetchUserProfile(user.id);
-							if (!profile?.is_admin) {
-								// Sign them out immediately
-								await supabase.auth.signOut();
-								return { 
-									ok: false, 
-									error: "These credentials are not for an admin account. Please uncheck the admin login option."
-								};
-							}
-						}
-						
-						return { ok: true };
-					}
-				}
-				
-				// If primary email failed, try recovery email
-				// This runs in parallel with a timeout for faster response
-				const rpcPromise = supabase.rpc('login_with_recovery_email', {
-					recovery_email: emailOrName,
-					password_input: password
-				});
-				
-				// Add timeout to prevent hanging
-				const timeoutPromise = new Promise((_, reject) => 
-					setTimeout(() => reject(new Error('Recovery check timeout')), 3000)
-				);
-				
+			if (!isValidEmailFormat) {
+				return { ok: false, error: "Please enter a valid email address" };
+			}
+
+			// Try primary email login
+			const { data, error } = await supabase.auth.signInWithPassword({ 
+				email: emailOrName, 
+				password: password 
+			});
+
+			if (error) {
+				// If primary email fails, try recovery email
 				try {
-					const { data: rpcResult, error: rpcError } = await Promise.race([
-						rpcPromise,
-						timeoutPromise
-					]);
-					
-					if (!rpcError && rpcResult?.success && rpcResult?.primary_email) {
+					const { data: rpcResult } = await supabase.rpc('login_with_recovery_email', {
+						recovery_email: emailOrName,
+						password_input: password
+					});
+
+					if (rpcResult?.success && rpcResult?.primary_email) {
 						// Login with the primary email from recovery
 						const { data: primaryLoginData } = await supabase.auth.signInWithPassword({ 
 							email: rpcResult.primary_email, 
 							password: password 
 						});
 						
-						if (primaryLoginData?.user) {
-							// If admin login was requested, verify the user is actually admin
-							if (isAdmin) {
-								const profile = await fetchUserProfile(primaryLoginData.user.id);
-								if (!profile?.is_admin) {
-									// Sign them out immediately
-									await supabase.auth.signOut();
-									return { 
-										ok: false, 
-										error: "These credentials are not for an admin account. Please uncheck the admin login option."
-									};
-								}
-							}
+						if (primaryLoginData?.user && !primaryLoginData.error) {
 							return { ok: true };
 						}
 					}
-				} catch {
-					// If recovery email check times out, just return the original error
-					// Silent fail in production
+				} catch (recoveryError) {
+					console.error('Recovery email login failed:', recoveryError);
 				}
 				
-				// Neither primary nor recovery worked
 				return { ok: false, error: "Invalid email or password" };
-			} else {
-				// Not a valid email format (might be username for admin)
-				return { ok: false, error: "Please enter a valid email address" };
 			}
-		} catch {
+
+			const user = data?.user;
+			if (!user) {
+				return { ok: false, error: "Invalid email or password" };
+			}
+
+			// Check if user is confirmed
+			if (!user.email_confirmed_at) {
+				await supabase.auth.signOut();
+				return { 
+					ok: false, 
+					error: "Please confirm your email before logging in. Check your inbox for the confirmation link.",
+					requiresConfirmation: true
+				};
+			}
+
+			return { ok: true };
+		} catch (error) {
+			console.error('Login error:', error);
 			return { ok: false, error: "Login failed. Please check your credentials." };
 		}
 	};
@@ -329,6 +335,8 @@ export function AuthProvider({ children }) {
 						profilePicture: profile?.profile_picture || finalProfilePicture,
 						coins: profile?.coins || 0,
 						role: isUserAdmin ? "admin" : "user",
+						hasRecoveryEmail: !!(profile?.recovery_email && profile.recovery_email.trim()),
+						recoveryEmail: profile?.recovery_email || null,
 					},
 					isLoading: false,
 				});
@@ -412,6 +420,41 @@ export function AuthProvider({ children }) {
 		return { ok: true };
 	};
 
+	const updateRecoveryEmail = async (newRecoveryEmail) => {
+		const userId = authState.currentUser?.id;
+		if (!userId) return { ok: false, error: "No authenticated user" };
+		
+		try {
+			const { error } = await supabase
+				.from("profiles")
+				.update({ recovery_email: newRecoveryEmail })
+				.eq("id", userId);
+
+			if (error) return { ok: false, error: error.message };
+
+			// Update local state
+			const hasRecoveryEmail = !!(newRecoveryEmail && newRecoveryEmail.trim());
+			setAuthState((prev) => ({
+				...prev,
+				currentUser: prev.currentUser ? {
+					...prev.currentUser,
+					hasRecoveryEmail: hasRecoveryEmail,
+					recoveryEmail: newRecoveryEmail,
+				} : prev.currentUser,
+			}));
+
+			// Mark recovery email setup as permanently completed if email was added
+			if (hasRecoveryEmail) {
+				const completedKey = `recovery_email_completed_${userId}`;
+				localStorage.setItem(completedKey, 'true');
+			}
+
+			return { ok: true };
+		} catch {
+			return { ok: false, error: "Failed to update recovery email" };
+		}
+	};
+
 	const addCoins = async (coinAmount) => {
 		const userId = authState.currentUser?.id;
 		if (!userId) return { ok: false, error: "No authenticated user" };
@@ -473,13 +516,15 @@ export function AuthProvider({ children }) {
 	};
 
 	const logout = async () => {
-		// Clear profile cache immediately
+		// Clear all storage and cache on explicit logout
+		localStorage.clear();
+		sessionStorage.clear();
 		profileCache.clear();
 		
 		// Update auth state immediately (don't wait for Supabase)
 		setAuthState({ isAuthenticated: false, role: "user", currentUser: null, isLoading: false });
 		
-		// Try to sign out from Supabase in background
+		// Sign out from Supabase
 		try {
 			// Add timeout to prevent hanging
 			const signOutPromise = supabase.auth.signOut();
@@ -488,8 +533,8 @@ export function AuthProvider({ children }) {
 			);
 			
 			await Promise.race([signOutPromise, timeoutPromise]);
-		} catch {
-			// Continue anyway since we already cleared local state
+		} catch (error) {
+			console.warn('Logout from Supabase failed, but local state cleared:', error);
 		}
 	};
 
@@ -507,6 +552,7 @@ export function AuthProvider({ children }) {
 			updateProfilePicture,
 			updateEmail,
 			updatePassword,
+			updateRecoveryEmail,
 			addCoins,
 			subtractCoins,
 		}),

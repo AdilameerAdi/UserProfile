@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { AuthProvider } from "./signup/AuthContext";
 import { NotificationProvider } from "./context/NotificationContext";
 import ProtectedRoute from "./signup/ProtectedRoute";
@@ -8,8 +8,9 @@ import ProtectedRoute from "./signup/ProtectedRoute";
 import Layout from "./user design/Layout";
 import Navbar from "./user design/navbar";
 import AdminLayout from "./admin/AdminLayout";
+import ErrorBoundary from "./components/ErrorBoundary";
+import SafetyButton from "./components/SafetyButton";
 import { useAuth } from "./signup/AuthContext";
-import { useState } from "react";
 
 // Lazy load heavy components
 const Login = lazy(() => import("./signup/Login"));
@@ -43,17 +44,41 @@ function AdminWithLayout() {
   );
 }
 
-// Loading component
-const LoadingSpinner = () => (
-  <div className="flex items-center justify-center min-h-screen bg-gray-900">
-    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-  </div>
-);
+function AppContent() {
+  const [isVisible, setIsVisible] = useState(!document.hidden);
 
-export default function App() {
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      const nowVisible = !document.hidden;
+      setIsVisible(nowVisible);
+      
+      if (nowVisible) {
+        setTimeout(() => {
+          try {
+            window.dispatchEvent(new Event('resize'));
+          } catch (error) {
+            console.error('Error dispatching resize:', error);
+          }
+        }, 100);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [isVisible]);
+
   return (
-    <AuthProvider>
-      <Router>
+    <Router>
+      <div 
+        style={{ 
+          opacity: isVisible ? 1 : 0.98, 
+          transition: 'opacity 0.1s ease-in-out',
+          minHeight: '100vh'
+        }}
+      >
         <Suspense fallback={<LoadingSpinner />}>
           <Routes>
             {/* Login page */}
@@ -101,7 +126,25 @@ export default function App() {
             />
           </Routes>
         </Suspense>
-      </Router>
-    </AuthProvider>
+        <SafetyButton />
+      </div>
+    </Router>
+  );
+}
+
+// Loading component
+const LoadingSpinner = () => (
+  <div className="flex items-center justify-center min-h-screen bg-gray-900">
+    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+  </div>
+);
+
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
