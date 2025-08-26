@@ -3,20 +3,24 @@ import { FaCoins } from "react-icons/fa";
 import { ThemeContext } from "../context/ThemeContext";
 import { useData } from "../context/DataContext";
 import { useAuth } from "../signup/AuthContext";
+import eneba from "../img/eneba.png";
+import rewarble from "../img/rewarble.png";
 
 export default function PurchaseOC() {
   const { theme } = useContext(ThemeContext);
   const { store, loadDataForTab } = useData();
   const { addCoins } = useAuth();
-  
-  // Load OC packages when component mounts
+
   useEffect(() => {
-    loadDataForTab('ocPackages');
+    loadDataForTab("ocPackages");
   }, []);
 
   const [selectedPackage, setSelectedPackage] = useState(null);
   const [now, setNow] = useState(Date.now());
   const [purchasing, setPurchasing] = useState(false);
+
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState(null);
 
   const packages = store.ocPackages;
 
@@ -37,24 +41,31 @@ export default function PurchaseOC() {
     return `${m}:${s < 10 ? "0" + s : s}`;
   };
 
-  const handlePurchase = async () => {
-    if (!selectedPackage || purchasing) return;
+  const handlePurchaseClick = () => {
+    if (!selectedPackage) return;
+    setShowPaymentModal(true); // Show payment selection popup
+  };
 
+  const confirmPurchase = async () => {
+    if (!selectedPackage || !selectedPayment) return;
     const selectedPkg = packages.find(pkg => pkg.id === selectedPackage);
     if (!selectedPkg) return;
 
     setPurchasing(true);
+    setShowPaymentModal(false);
 
     try {
-      // Simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Add coins to user account
+      await new Promise((resolve) => setTimeout(resolve, 2000)); // Simulate payment
       const result = await addCoins(selectedPkg.coins);
-      
+
       if (result.ok) {
-        alert(`Success! You purchased ${Number(selectedPkg.coins).toLocaleString()} coins for €${Number(selectedPkg.price).toFixed(2)}`);
+        alert(
+          `Success! You purchased ${Number(selectedPkg.coins).toLocaleString()} coins for €${Number(selectedPkg.price).toFixed(
+            2
+          )} using ${selectedPayment.toUpperCase()}`
+        );
         setSelectedPackage(null);
+        setSelectedPayment(null);
       } else {
         alert(`Purchase failed: ${result.error}`);
       }
@@ -78,9 +89,13 @@ export default function PurchaseOC() {
         Select a package to buy coins and unlock exciting features!
       </p>
 
+      {/* Packages */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 mb-8">
         {packages.length === 0 && (
-          <div className="col-span-full text-center text-sm" style={{ color: theme.subTextColor }}>
+          <div
+            className="col-span-full text-center text-sm"
+            style={{ color: theme.subTextColor }}
+          >
             No OC packages yet. Admin can add packages in Admin Panel.
           </div>
         )}
@@ -92,7 +107,7 @@ export default function PurchaseOC() {
             <div
               key={pkg.id}
               onClick={() => setSelectedPackage(pkg.id)}
-              className={`relative cursor-pointer rounded-xl border transition-all duration-300 flex flex-col justify-between items-center text-center h-44 w-full p-4`}
+              className="relative cursor-pointer rounded-xl border transition-all duration-300 flex flex-col justify-between items-center text-center h-44 w-full p-4"
               style={{
                 borderColor: active
                   ? theme.activeBorder || "#3B82F6"
@@ -107,14 +122,20 @@ export default function PurchaseOC() {
                 className="text-4xl mb-2"
                 style={{ color: theme.coinColor || "#FBBF24" }}
               />
-              <h3 className="text-lg font-semibold">{Number(pkg.coins).toLocaleString()} Coins</h3>
-              <p style={{ color: theme.subTextColor || "#9CA3AF" }}>€{Number(pkg.price).toFixed(2)}</p>
+              <h3 className="text-lg font-semibold">
+                {Number(pkg.coins).toLocaleString()} Coins
+              </h3>
+              <p style={{ color: theme.subTextColor || "#9CA3AF" }}>
+                €{Number(pkg.price).toFixed(2)}
+              </p>
 
               {pkg.offer && (
                 <div
                   className="text-xs font-semibold px-2 py-1 rounded-full mt-2"
                   style={{
-                    background: theme.offerBadgeBackground || "linear-gradient(to right, #EC4899, #EF4444)",
+                    background:
+                      theme.offerBadgeBackground ||
+                      "linear-gradient(to right, #EC4899, #EF4444)",
                     color: theme.offerBadgeText || "#FFFFFF",
                   }}
                 >
@@ -132,7 +153,10 @@ export default function PurchaseOC() {
               )}
 
               {active && (
-                <p className="text-sm font-semibold mt-1" style={{ color: theme.activeText || "#3B82F6" }}>
+                <p
+                  className="text-sm font-semibold mt-1"
+                  style={{ color: theme.activeText || "#3B82F6" }}
+                >
                   Selected
                 </p>
               )}
@@ -141,20 +165,65 @@ export default function PurchaseOC() {
         })}
       </div>
 
+      {/* Purchase Button */}
       <button
         disabled={!selectedPackage || purchasing}
-        onClick={handlePurchase}
+        onClick={handlePurchaseClick}
         className="w-full md:w-auto px-8 py-3 rounded-lg font-semibold transition-all duration-300"
         style={{
-          background: selectedPackage && !purchasing
-            ? theme.buttonColor || "linear-gradient(to right, #3B82F6, #6366F1)"
-            : theme.disabledButton || "#374151",
+          background:
+            selectedPackage && !purchasing
+              ? theme.buttonColor ||
+                "linear-gradient(to right, #3B82F6, #6366F1)"
+              : theme.disabledButton || "#374151",
           color: theme.buttonTextColor || "#FFFFFF",
-          cursor: selectedPackage && !purchasing ? "pointer" : "not-allowed",
+          cursor:
+            selectedPackage && !purchasing ? "pointer" : "not-allowed",
         }}
       >
         {purchasing ? "Processing..." : selectedPackage ? "Buy Now" : "Select a Package"}
       </button>
+
+      {/* Payment Modal */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-80 text-center">
+            <h2 className="text-xl font-bold mb-4">Select Payment Method</h2>
+
+            <div className="flex flex-col gap-4">
+              {[{ id: "eneba", img: eneba }, { id: "rewarble", img: rewarble }].map((method) => (
+                <div
+                  key={method.id}
+                  onClick={() => setSelectedPayment(method.id)}
+                  className={`border rounded-lg p-2 cursor-pointer flex justify-center items-center ${
+                    selectedPayment === method.id ? "border-blue-500" : "border-gray-300"
+                  }`}
+                >
+                  <img src={method.img} alt={method.id} className="h-12" />
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={confirmPurchase}
+              disabled={!selectedPayment}
+              className={`mt-6 px-6 py-2 rounded-lg font-semibold w-full ${
+                selectedPayment
+                  ? "bg-blue-600 text-white cursor-pointer"
+                  : "bg-gray-400 text-gray-700 cursor-not-allowed"
+              }`}
+            >
+              Confirm Purchase
+            </button>
+            <button
+              onClick={() => setShowPaymentModal(false)}
+              className="mt-3 text-sm text-red-500 underline"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
