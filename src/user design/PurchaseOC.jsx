@@ -1,28 +1,78 @@
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext, useCallback } from "react";
 import { FaCoins } from "react-icons/fa";
 import { ThemeContext } from "../context/ThemeContext";
-import { useData } from "../context/DataContext";
+import { supabase } from "../supabaseClient";
 import { useAuth } from "../signup/AuthContext";
 import eneba from "../img/eneba.png";
 import rewarble from "../img/rewarble.png";
 
 export default function PurchaseOC() {
   const { theme } = useContext(ThemeContext);
-  const { store, loadDataForTab } = useData();
   const { addCoins } = useAuth();
-
-  useEffect(() => {
-    loadDataForTab("ocPackages");
-  }, []);
 
   const [selectedPackage, setSelectedPackage] = useState(null);
   const [now, setNow] = useState(Date.now());
   const [purchasing, setPurchasing] = useState(false);
+  const [packages, setPackages] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPackages, setTotalPackages] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
 
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState(null);
+  
+  const PACKAGES_PER_PAGE = 10;
 
-  const packages = store.ocPackages;
+  // Load OC packages with pagination
+  const loadPackages = useCallback(async (page = 1, append = false) => {
+    setLoading(true);
+    
+    try {
+      const from = (page - 1) * PACKAGES_PER_PAGE;
+      const to = from + PACKAGES_PER_PAGE - 1;
+      
+      // Get OC packages with pagination
+      const { data, error, count } = await supabase
+        .from('oc_packages')
+        .select('*', { count: 'exact' })
+        .range(from, to)
+        .order('id', { ascending: true });
+      
+      if (error) {
+        console.error('[PurchaseOC] Supabase error:', error);
+      } else {
+        const newPackages = data || [];
+        
+        if (append) {
+          setPackages(prev => [...prev, ...newPackages]);
+        } else {
+          setPackages(newPackages);
+        }
+        
+        setTotalPackages(count || 0);
+        setHasMore(newPackages.length === PACKAGES_PER_PAGE);
+      }
+    } catch (error) {
+      console.error('[PurchaseOC] Error loading packages:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  
+  // Load first page on mount
+  useEffect(() => {
+    loadPackages(1, false);
+  }, [loadPackages]);
+  
+  // Load next page
+  const loadNextPage = () => {
+    if (!loading && hasMore) {
+      const nextPage = currentPage + 1;
+      setCurrentPage(nextPage);
+      loadPackages(nextPage, true);
+    }
+  };
 
   useEffect(() => {
     const interval = setInterval(() => setNow(Date.now()), 1000);
@@ -76,6 +126,24 @@ export default function PurchaseOC() {
     }
   };
 
+  // Only show loading if we have no packages AND loading is true
+  if (loading && packages.length === 0) {
+    return (
+      <div
+        className="w-full max-w-6xl mx-auto p-4 flex items-center justify-center h-64"
+        style={{ fontFamily: theme.fontFamily, color: theme.textColor }}
+      >
+        <div className="text-center">
+          <div 
+            className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" 
+            style={{ borderColor: theme.primary }}
+          ></div>
+          <p>Loading OC packages...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className="p-6 transition-colors duration-300"
@@ -92,11 +160,10 @@ export default function PurchaseOC() {
       {/* Packages */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 mb-8">
         {packages.length === 0 && (
-          <div
-            className="col-span-full text-center text-sm"
-            style={{ color: theme.subTextColor }}
-          >
-            No OC packages yet. Admin can add packages in Admin Panel.
+          <div className="col-span-full text-center py-12" style={{ color: theme.subTextColor }}>
+            <div className="text-6xl mb-4">🪙</div>
+            <p className="text-lg font-medium mb-2">No packages available yet</p>
+            <p className="text-sm">OC packages will appear here when added by the admin</p>
           </div>
         )}
         {packages.map((pkg) => {
@@ -165,11 +232,43 @@ export default function PurchaseOC() {
         })}
       </div>
 
+      {/* Pagination Controls */}
+      {packages.length > 0 && (
+        <div className="mt-8 flex flex-col items-center gap-4">
+          <div className="text-center">
+            <p className="text-sm" style={{ color: theme.subTextColor }}>
+              Showing {packages.length} of {totalPackages} packages
+            </p>
+          </div>
+          
+          {hasMore && (
+            <button
+              onClick={loadNextPage}
+              disabled={loading}
+              className="px-6 py-2 rounded-lg font-medium transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                backgroundColor: theme.primary || '#3B82F6',
+                color: theme.activeText || '#FFFFFF',
+                border: `1px solid ${theme.primary || '#3B82F6'}`
+              }}
+            >
+              {loading ? 'Loading...' : 'Load More Packages'}
+            </button>
+          )}
+          
+          {!hasMore && packages.length > 0 && (
+            <p className="text-sm" style={{ color: theme.subTextColor }}>
+              All packages loaded
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Purchase Button */}
       <button
         disabled={!selectedPackage || purchasing}
         onClick={handlePurchaseClick}
-        className="w-full md:w-auto px-8 py-3 rounded-lg font-semibold transition-all duration-300"
+        className="w-full md:w-auto px-8 py-3 rounded-lg font-semibold transition-all duration-300 mt-6"
         style={{
           background:
             selectedPackage && !purchasing

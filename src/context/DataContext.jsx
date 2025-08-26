@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useState, useEffect, useCallback, useRef } from "react";
+import { createContext, useContext, useMemo, useState, useCallback, useRef } from "react";
 import { supabase } from "../supabaseClient";
 
 const defaultData = {
@@ -30,64 +30,11 @@ export function DataProvider({ children }) {
   loadedTabsRef.current = loadedTabs;
 
   // Load data based on active tab - memoized to prevent infinite re-renders
-  const loadDataForTab = useCallback(async (tab) => {
-    // Function disabled to prevent infinite loops
+  const loadDataForTab = useCallback(async () => {
+    // Function disabled since we now use direct Supabase calls in components
+    console.log('[DataContext] loadDataForTab is deprecated, use direct Supabase calls instead');
     return;
-    const tableMap = {
-      characters: 'characters',
-      ocPackages: 'oc_packages',
-      shopItems: 'shop_items',
-      wheelRewards: 'wheel_rewards'
-    };
-    
-    // console.log(`[DataContext] Loading data for ${tab}...`);
-    
-    // Check if already loaded recently using ref
-    if (loadedTabsRef.current[tab]) {
-      console.log(`[DataContext] ${tab} already loaded, skipping`);
-      return;
-    }
-    
-    setLoading(true);
-    
-    try {
-      // console.log(`[DataContext] Querying ${tableMap[tab]} table...`);
-      
-      // Simple, direct query without any optimization that might cause issues
-      const { data, error } = await supabase
-        .from(tableMap[tab])
-        .select("*");
-      
-      console.log(`[DataContext] Query result for ${tab}:`, { data, error });
-      
-      if (error) {
-        throw error;
-      }
-      
-      const resultData = data || [];
-      console.log(`[DataContext] Found ${resultData.length} items for ${tab}`);
-      
-      // Update store and mark as loaded
-      setStore(prev => ({ ...prev, [tab]: resultData }));
-      setLoadedTabs(prev => ({ ...prev, [tab]: true }));
-      
-      // Clear any previous errors
-      setError(null);
-      
-    } catch (error) {
-      console.error(`[DataContext] Error loading ${tab}:`, error);
-      
-      // Set empty array so UI shows "no items" instead of loading forever
-      setStore(prev => ({ ...prev, [tab]: [] }));
-      setLoadedTabs(prev => ({ ...prev, [tab]: true }));
-      
-      // Show error message
-      setError(`Failed to load ${tab}: ${error.message}`);
-    } finally {
-      setLoading(false);
-      console.log(`[DataContext] Finished loading ${tab}`);
-    }
-  }, []); // No dependencies now
+  }, []);
 
   const loadAllData = async () => {
     if (loading) return; // Prevent duplicate calls
@@ -457,7 +404,7 @@ export function DataProvider({ children }) {
         // Characters are displayed at ~160px height, so 400px is plenty
         const optimizedDataUrl = await getOptimizedImageDataUrl(file, 400, 0.8);
         return optimizedDataUrl;
-      } catch (error) {
+      } catch {
         console.log('Image optimization failed, using original size');
         // Fall back to original if compression fails
       }
@@ -497,6 +444,7 @@ export function DataProvider({ children }) {
       store, 
       loading, 
       error, 
+      loadAllData,
       loadDataForTab,
       addCharacter,
       updateCharacter,
@@ -517,6 +465,7 @@ export function DataProvider({ children }) {
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useData() {
   return useContext(DataContext);
 }

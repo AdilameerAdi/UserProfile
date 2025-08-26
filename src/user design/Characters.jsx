@@ -1,6 +1,5 @@
-import { useContext, useEffect, useState, useRef } from "react";
+import { useContext, useEffect, useState, useCallback } from "react";
 import { ThemeContext } from "../context/ThemeContext";
-import { useData } from "../context/DataContext";
 import { supabase } from "../supabaseClient";
 
 // Simple Character Image Component
@@ -44,7 +43,7 @@ export default function Characters() {
   
   
   // Load characters with pagination
-  const loadCharacters = async (page = 1, append = false) => {
+  const loadCharacters = useCallback(async (page = 1, append = false) => {
     setLoading(true);
     
     try {
@@ -71,7 +70,7 @@ export default function Characters() {
         }
         
         setTotalCharacters(count || 0);
-        setHasMore(newCharacters.length === CHARACTERS_PER_PAGE && characters.length + newCharacters.length < count);
+        setHasMore(newCharacters.length === CHARACTERS_PER_PAGE);
         
       }
     } catch (error) {
@@ -79,12 +78,12 @@ export default function Characters() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
   
   // Load first page on mount
   useEffect(() => {
     loadCharacters(1, false);
-  }, []);
+  }, [loadCharacters]);
   
   // Load next page
   const loadNextPage = () => {

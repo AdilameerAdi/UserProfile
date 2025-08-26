@@ -1,23 +1,72 @@
-import { useState, useContext, useEffect } from "react";
+import { useState, useContext, useEffect, useCallback } from "react";
 import { FaCoins } from "react-icons/fa";
 import { ThemeContext } from "../context/ThemeContext";
-import { useData } from "../context/DataContext";
+import { supabase } from "../supabaseClient";
 
 export default function FortuneWheel() {
   const { theme } = useContext(ThemeContext);
-  const { store, loadDataForTab } = useData();
-  
-  // Load wheel rewards when component mounts
-  useEffect(() => {
-    loadDataForTab('wheelRewards');
-  }, []);
 
   const [spinsLeft, setSpinsLeft] = useState(3);
   const [spinning, setSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
   const [selectedPrize, setSelectedPrize] = useState(null);
+  const [prizes, setPrizes] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPrizes, setTotalPrizes] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  
+  const PRIZES_PER_PAGE = 20;
 
-  const prizes = store.wheelRewards;
+  // Load wheel rewards with pagination
+  const loadPrizes = useCallback(async (page = 1, append = false) => {
+    setLoading(true);
+    
+    try {
+      const from = (page - 1) * PRIZES_PER_PAGE;
+      const to = from + PRIZES_PER_PAGE - 1;
+      
+      // Get wheel rewards with pagination
+      const { data, error, count } = await supabase
+        .from('wheel_rewards')
+        .select('*', { count: 'exact' })
+        .range(from, to)
+        .order('id', { ascending: true });
+      
+      if (error) {
+        console.error('[FortuneWheel] Supabase error:', error);
+      } else {
+        const newPrizes = data || [];
+        
+        if (append) {
+          setPrizes(prev => [...prev, ...newPrizes]);
+        } else {
+          setPrizes(newPrizes);
+        }
+        
+        setTotalPrizes(count || 0);
+        setHasMore(newPrizes.length === PRIZES_PER_PAGE);
+      }
+    } catch (error) {
+      console.error('[FortuneWheel] Error loading prizes:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  
+  // Load first page on mount
+  useEffect(() => {
+    loadPrizes(1, false);
+  }, [loadPrizes]);
+  
+  // Load next page
+  const loadNextPage = () => {
+    if (!loading && hasMore) {
+      const nextPage = currentPage + 1;
+      setCurrentPage(nextPage);
+      loadPrizes(nextPage, true);
+    }
+  };
 
   const spinWheel = () => {
     if (spinsLeft <= 0) {
@@ -56,6 +105,24 @@ export default function FortuneWheel() {
     }, 5000);
   };
 
+  // Only show loading if we have no prizes AND loading is true
+  if (loading && prizes.length === 0) {
+    return (
+      <div
+        className="w-full max-w-6xl mx-auto p-4 flex items-center justify-center h-64"
+        style={{ fontFamily: theme.fontFamily, color: theme.textColor }}
+      >
+        <div className="text-center">
+          <div 
+            className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" 
+            style={{ borderColor: theme.primary }}
+          ></div>
+          <p>Loading wheel rewards...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className="p-6 flex flex-col items-center transition-colors duration-300"
@@ -69,8 +136,10 @@ export default function FortuneWheel() {
       </p>
 
       {prizes.length === 0 && (
-        <div className="text-sm" style={{ color: theme.subTextColor }}>
-          No rewards yet. Admin can add rewards in Admin Panel.
+        <div className="text-center py-12" style={{ color: theme.subTextColor }}>
+          <div className="text-6xl mb-4">🎡</div>
+          <p className="text-lg font-medium mb-2">No rewards available yet</p>
+          <p className="text-sm">Wheel rewards will appear here when added by the admin</p>
         </div>
       )}
 
@@ -140,13 +209,35 @@ export default function FortuneWheel() {
           <h2 className="text-xl font-bold mb-3" style={{ color: theme.titleColor }}>
             Possible Prizes
           </h2>
-          <ul className="space-y-2" style={{ color: theme.textColor }}>
+          <ul className="space-y-2 max-h-64 overflow-y-auto" style={{ color: theme.textColor }}>
             {prizes.map((p) => (
               <li key={p.id} className="flex items-center gap-2">
                 <span>{p.icon}</span> {p.name}
               </li>
             ))}
           </ul>
+          
+          {/* Pagination for Prize List */}
+          {hasMore && (
+            <button
+              onClick={loadNextPage}
+              disabled={loading}
+              className="mt-3 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed w-full"
+              style={{
+                backgroundColor: theme.primary || '#3B82F6',
+                color: theme.activeText || '#FFFFFF',
+                border: `1px solid ${theme.primary || '#3B82F6'}`
+              }}
+            >
+              {loading ? 'Loading...' : 'Load More Prizes'}
+            </button>
+          )}
+          
+          {totalPrizes > 0 && (
+            <p className="text-xs mt-2 text-center" style={{ color: theme.subTextColor }}>
+              Showing {prizes.length} of {totalPrizes} prizes
+            </p>
+          )}
         </div>
       </div>
 

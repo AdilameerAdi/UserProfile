@@ -75,7 +75,6 @@ function AdminCharacterImage({ src, alt, theme, size = "8" }) {
 export default function Admin({ activeTab, setActiveTab }) {
   const { theme } = useContext(ThemeContext);
   const {
-    store,
     uploadFile,
     addCharacter,
     updateCharacter,
@@ -91,58 +90,102 @@ export default function Admin({ activeTab, setActiveTab }) {
     removeWheelReward,
   } = useData();
 
-  // Pagination state for characters
+  // Pagination state for all features
   const [characters, setCharacters] = useState([]);
   const [charactersLoading, setCharactersLoading] = useState(false);
   const [charactersPage, setCharactersPage] = useState(1);
   const [totalCharacters, setTotalCharacters] = useState(0);
   const [hasMoreCharacters, setHasMoreCharacters] = useState(true);
   
-  const CHARACTERS_PER_PAGE = 5;
+  const [ocPackages, setOcPackages] = useState([]);
+  const [ocPackagesLoading, setOcPackagesLoading] = useState(false);
+  const [ocPackagesPage, setOcPackagesPage] = useState(1);
+  const [totalOcPackages, setTotalOcPackages] = useState(0);
+  const [hasMoreOcPackages, setHasMoreOcPackages] = useState(true);
+  
+  const [shopItems, setShopItems] = useState([]);
+  const [shopItemsLoading, setShopItemsLoading] = useState(false);
+  const [shopItemsPage, setShopItemsPage] = useState(1);
+  const [totalShopItems, setTotalShopItems] = useState(0);
+  const [hasMoreShopItems, setHasMoreShopItems] = useState(true);
+  
+  const [wheelRewards, setWheelRewards] = useState([]);
+  const [wheelRewardsLoading, setWheelRewardsLoading] = useState(false);
+  const [wheelRewardsPage, setWheelRewardsPage] = useState(1);
+  const [totalWheelRewards, setTotalWheelRewards] = useState(0);
+  const [hasMoreWheelRewards, setHasMoreWheelRewards] = useState(true);
+  
+  const ITEMS_PER_PAGE = 5;
 
-  // Load characters with pagination
-  const loadCharactersPaginated = async (page = 1, append = false) => {
-    setCharactersLoading(true);
+  // Load data with pagination - generic function
+  const loadDataPaginated = async (table, setState, setLoading, setTotal, setHasMore, page = 1, append = false) => {
+    setLoading(true);
     
     try {
-      const from = (page - 1) * CHARACTERS_PER_PAGE;
-      const to = from + CHARACTERS_PER_PAGE - 1;
+      const from = (page - 1) * ITEMS_PER_PAGE;
+      const to = from + ITEMS_PER_PAGE - 1;
       
       const { data, error, count } = await supabase
-        .from('characters')
+        .from(table)
         .select('*', { count: 'exact' })
         .range(from, to)
         .order('id', { ascending: true });
       
       if (error) {
-        console.error('[Admin] Characters load error:', error);
+        console.error(`[Admin] ${table} load error:`, error);
       } else {
-        const newCharacters = data || [];
+        const newItems = data || [];
         
         if (append) {
-          setCharacters(prev => [...prev, ...newCharacters]);
+          setState(prev => [...prev, ...newItems]);
         } else {
-          setCharacters(newCharacters);
+          setState(newItems);
         }
         
-        setTotalCharacters(count || 0);
-        setHasMoreCharacters(newCharacters.length === CHARACTERS_PER_PAGE);
-        
+        setTotal(count || 0);
+        setHasMore(newItems.length === ITEMS_PER_PAGE);
       }
     } catch (error) {
-      console.error('[Admin] Error loading characters:', error);
+      console.error(`[Admin] Error loading ${table}:`, error);
     } finally {
-      setCharactersLoading(false);
+      setLoading(false);
     }
   };
 
-  // Load characters when activeTab is characters
+  // Specific load functions
+  const loadCharactersPaginated = (page = 1, append = false) => 
+    loadDataPaginated('characters', setCharacters, setCharactersLoading, setTotalCharacters, setHasMoreCharacters, page, append);
+
+  const loadOcPackagesPaginated = (page = 1, append = false) => 
+    loadDataPaginated('oc_packages', setOcPackages, setOcPackagesLoading, setTotalOcPackages, setHasMoreOcPackages, page, append);
+
+  const loadShopItemsPaginated = (page = 1, append = false) => 
+    loadDataPaginated('shop_items', setShopItems, setShopItemsLoading, setTotalShopItems, setHasMoreShopItems, page, append);
+
+  const loadWheelRewardsPaginated = (page = 1, append = false) => 
+    loadDataPaginated('wheel_rewards', setWheelRewards, setWheelRewardsLoading, setTotalWheelRewards, setHasMoreWheelRewards, page, append);
+
+  // Load data when activeTab changes
   useEffect(() => {
-    if (activeTab === 'characters') {
-      loadCharactersPaginated(1, false);
-      setCharactersPage(1);
+    switch (activeTab) {
+      case 'characters':
+        loadCharactersPaginated(1, false);
+        setCharactersPage(1);
+        break;
+      case 'ocPackages':
+        loadOcPackagesPaginated(1, false);
+        setOcPackagesPage(1);
+        break;
+      case 'shopItems':
+        loadShopItemsPaginated(1, false);
+        setShopItemsPage(1);
+        break;
+      case 'wheelRewards':
+        loadWheelRewardsPaginated(1, false);
+        setWheelRewardsPage(1);
+        break;
     }
-  }, [activeTab]);
+  }, [activeTab, loadCharactersPaginated, loadOcPackagesPaginated, loadShopItemsPaginated, loadWheelRewardsPaginated]);
 
   // activeTab and setActiveTab are now passed as props
   
@@ -189,6 +232,9 @@ export default function Admin({ activeTab, setActiveTab }) {
     
     if (result?.success) {
       resetAll();
+      // Refresh the characters list
+      loadCharactersPaginated(1, false);
+      setCharactersPage(1);
     } else {
       alert(`Failed to save character: ${result?.error || 'Unknown error'}`);
     }
@@ -211,6 +257,9 @@ export default function Admin({ activeTab, setActiveTab }) {
     
     if (result?.success) {
       resetAll();
+      // Refresh the OC packages list
+      loadOcPackagesPaginated(1, false);
+      setOcPackagesPage(1);
     } else {
       alert(`Failed to save OC Package: ${result?.error || 'Unknown error'}`);
     }
@@ -239,6 +288,9 @@ export default function Admin({ activeTab, setActiveTab }) {
     
     if (result?.success) {
       resetAll();
+      // Refresh the shop items list
+      loadShopItemsPaginated(1, false);
+      setShopItemsPage(1);
     } else {
       alert(`Failed to save shop item: ${result?.error || 'Unknown error'}`);
     }
@@ -257,6 +309,9 @@ export default function Admin({ activeTab, setActiveTab }) {
     
     if (result?.success) {
       resetAll();
+      // Refresh the wheel rewards list
+      loadWheelRewardsPaginated(1, false);
+      setWheelRewardsPage(1);
     } else {
       alert(`Failed to save wheel reward: ${result?.error || 'Unknown error'}`);
     }
@@ -285,16 +340,45 @@ export default function Admin({ activeTab, setActiveTab }) {
   const handleDelete = async (type, id) => {
     const confirmDelete = window.confirm("Delete this item?");
     if (!confirmDelete) return;
-    if (type === "character") await removeCharacter?.(id);
-    if (type === "pkg") await removeOcPackage?.(id);
-    if (type === "item") await removeShopItem?.(id);
-    if (type === "reward") await removeWheelReward?.(id);
+    
+    let result;
+    if (type === "character") result = await removeCharacter?.(id);
+    if (type === "pkg") result = await removeOcPackage?.(id);
+    if (type === "item") result = await removeShopItem?.(id);
+    if (type === "reward") result = await removeWheelReward?.(id);
+    
+    // Refresh the respective list after deletion
+    if (result?.success) {
+      if (type === "character") {
+        loadCharactersPaginated(1, false);
+        setCharactersPage(1);
+      }
+      if (type === "pkg") {
+        loadOcPackagesPaginated(1, false);
+        setOcPackagesPage(1);
+      }
+      if (type === "item") {
+        loadShopItemsPaginated(1, false);
+        setShopItemsPage(1);
+      }
+      if (type === "reward") {
+        loadWheelRewardsPaginated(1, false);
+        setWheelRewardsPage(1);
+      }
+    }
+    
     if (isEditing && edit.id === id && edit.type === type) resetAll();
   };
 
   const renderTabContent = () => {
-    // Show loading for characters tab if data is loading
-    if (activeTab === 'characters' && charactersLoading && characters.length === 0) {
+    // Show loading for any tab if data is loading and no items exist
+    const isLoading = 
+      (activeTab === 'characters' && charactersLoading && characters.length === 0) ||
+      (activeTab === 'ocPackages' && ocPackagesLoading && ocPackages.length === 0) ||
+      (activeTab === 'shopItems' && shopItemsLoading && shopItems.length === 0) ||
+      (activeTab === 'wheelRewards' && wheelRewardsLoading && wheelRewards.length === 0);
+      
+    if (isLoading) {
       return (
         <div className="flex items-center justify-center h-32">
           <div className="text-center">
@@ -444,7 +528,7 @@ export default function Admin({ activeTab, setActiveTab }) {
             <div className="p-4 rounded-xl border" style={{ background: theme.cardBackground, borderColor: theme.cardBorderColor }}>
               <h3 className="text-lg font-semibold mb-2">Existing OC Packages</h3>
               <ul className="space-y-2 text-sm">
-                {store.ocPackages.map((p) => (
+                {ocPackages.map((p) => (
                   <li key={p.id} className="flex items-center justify-between gap-3 p-2 rounded border" style={listRowStyle}>
                     <div className="flex items-center gap-3">
                       <span>{p.coins} coins — €{p.price}</span>
@@ -457,6 +541,31 @@ export default function Admin({ activeTab, setActiveTab }) {
                   </li>
                 ))}
               </ul>
+              
+              {/* OC Packages Pagination */}
+              <div className="mt-4 flex flex-col gap-2">
+                <div className="text-xs" style={{ color: theme.subTextColor }}>
+                  Showing {ocPackages.length} of {totalOcPackages} packages
+                </div>
+                
+                {hasMoreOcPackages && (
+                  <button
+                    onClick={() => {
+                      const nextPage = ocPackagesPage + 1;
+                      setOcPackagesPage(nextPage);
+                      loadOcPackagesPaginated(nextPage, true);
+                    }}
+                    disabled={ocPackagesLoading}
+                    className="px-3 py-1 rounded text-xs font-medium transition-all duration-300 hover:scale-105 disabled:opacity-50"
+                    style={{
+                      backgroundColor: theme.primary || '#3B82F6',
+                      color: theme.activeText || '#FFFFFF'
+                    }}
+                  >
+                    {ocPackagesLoading ? 'Loading...' : 'Load More'}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         );
@@ -517,7 +626,7 @@ export default function Admin({ activeTab, setActiveTab }) {
             <div className="p-4 rounded-xl border" style={{ background: theme.cardBackground, borderColor: theme.cardBorderColor }}>
               <h3 className="text-lg font-semibold mb-2">Existing Shop Items</h3>
               <ul className="space-y-2 text-sm">
-                {store.shopItems.map((s) => (
+                {shopItems.map((s) => (
                   <li key={s.id} className="flex items-center justify-between gap-3 p-2 rounded border" style={listRowStyle}>
                     <div className="flex items-center gap-2">
                       {s.image_url ? <img src={s.image_url} className="h-8 w-8 rounded object-cover" /> : <div className="h-8 w-8 rounded border" style={{ background: theme.inactiveTabBg, borderColor: theme.cardBorderColor }} />}
@@ -531,6 +640,31 @@ export default function Admin({ activeTab, setActiveTab }) {
                   </li>
                 ))}
               </ul>
+              
+              {/* Shop Items Pagination */}
+              <div className="mt-4 flex flex-col gap-2">
+                <div className="text-xs" style={{ color: theme.subTextColor }}>
+                  Showing {shopItems.length} of {totalShopItems} items
+                </div>
+                
+                {hasMoreShopItems && (
+                  <button
+                    onClick={() => {
+                      const nextPage = shopItemsPage + 1;
+                      setShopItemsPage(nextPage);
+                      loadShopItemsPaginated(nextPage, true);
+                    }}
+                    disabled={shopItemsLoading}
+                    className="px-3 py-1 rounded text-xs font-medium transition-all duration-300 hover:scale-105 disabled:opacity-50"
+                    style={{
+                      backgroundColor: theme.primary || '#3B82F6',
+                      color: theme.activeText || '#FFFFFF'
+                    }}
+                  >
+                    {shopItemsLoading ? 'Loading...' : 'Load More'}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         );
@@ -588,7 +722,7 @@ export default function Admin({ activeTab, setActiveTab }) {
             <div className="p-4 rounded-xl border" style={{ background: theme.cardBackground, borderColor: theme.cardBorderColor }}>
               <h3 className="text-lg font-semibold mb-2">Existing Wheel Rewards</h3>
               <ul className="space-y-2 text-sm">
-                {store.wheelRewards.map((r) => (
+                {wheelRewards.map((r) => (
                   <li key={r.id} className="flex items-center justify-between gap-3 p-2 rounded border" style={listRowStyle}>
                     <div className="flex items-center gap-2">
                       <span className={`${r.color} px-2 py-1 rounded`}>{r.icon}</span>
@@ -601,6 +735,31 @@ export default function Admin({ activeTab, setActiveTab }) {
                   </li>
                 ))}
               </ul>
+              
+              {/* Wheel Rewards Pagination */}
+              <div className="mt-4 flex flex-col gap-2">
+                <div className="text-xs" style={{ color: theme.subTextColor }}>
+                  Showing {wheelRewards.length} of {totalWheelRewards} rewards
+                </div>
+                
+                {hasMoreWheelRewards && (
+                  <button
+                    onClick={() => {
+                      const nextPage = wheelRewardsPage + 1;
+                      setWheelRewardsPage(nextPage);
+                      loadWheelRewardsPaginated(nextPage, true);
+                    }}
+                    disabled={wheelRewardsLoading}
+                    className="px-3 py-1 rounded text-xs font-medium transition-all duration-300 hover:scale-105 disabled:opacity-50"
+                    style={{
+                      backgroundColor: theme.primary || '#3B82F6',
+                      color: theme.activeText || '#FFFFFF'
+                    }}
+                  >
+                    {wheelRewardsLoading ? 'Loading...' : 'Load More'}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         );
@@ -619,20 +778,34 @@ export default function Admin({ activeTab, setActiveTab }) {
       <div className="flex justify-end">
         <button
           onClick={() => {
-            if (activeTab === 'characters') {
-              loadCharactersPaginated(1, false);
-              setCharactersPage(1);
+            switch (activeTab) {
+              case 'characters':
+                loadCharactersPaginated(1, false);
+                setCharactersPage(1);
+                break;
+              case 'ocPackages':
+                loadOcPackagesPaginated(1, false);
+                setOcPackagesPage(1);
+                break;
+              case 'shopItems':
+                loadShopItemsPaginated(1, false);
+                setShopItemsPage(1);
+                break;
+              case 'wheelRewards':
+                loadWheelRewardsPaginated(1, false);
+                setWheelRewardsPage(1);
+                break;
             }
           }}
-          disabled={charactersLoading}
+          disabled={charactersLoading || ocPackagesLoading || shopItemsLoading || wheelRewardsLoading}
           className="px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200"
           style={{
-            background: charactersLoading ? theme.disabledButton : theme.buttonColor,
+            background: (charactersLoading || ocPackagesLoading || shopItemsLoading || wheelRewardsLoading) ? theme.disabledButton : theme.buttonColor,
             color: theme.buttonTextColor,
-            cursor: charactersLoading ? 'not-allowed' : 'pointer'
+            cursor: (charactersLoading || ocPackagesLoading || shopItemsLoading || wheelRewardsLoading) ? 'not-allowed' : 'pointer'
           }}
         >
-          {charactersLoading ? 'Loading...' : '🔄 Refresh Data'}
+          {(charactersLoading || ocPackagesLoading || shopItemsLoading || wheelRewardsLoading) ? 'Loading...' : '🔄 Refresh Data'}
         </button>
       </div>
       {renderTabContent()}

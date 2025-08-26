@@ -1,20 +1,69 @@
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext, useCallback } from "react";
 import { FaCoins } from "react-icons/fa";
-import { useData } from "../context/DataContext";
 import { ThemeContext } from "../context/ThemeContext";
+import { supabase } from "../supabaseClient";
 
 export default function Shop() {
-  const { store, loadDataForTab } = useData();
   const { theme } = useContext(ThemeContext);
-  
-  // Load shop items when component mounts
-  useEffect(() => {
-    loadDataForTab('shopItems');
-  }, []);
   const [selectedItem, setSelectedItem] = useState(null);
   const [now, setNow] = useState(Date.now());
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  
+  const ITEMS_PER_PAGE = 12;
 
-  const items = store.shopItems;
+  // Load shop items with pagination
+  const loadItems = useCallback(async (page = 1, append = false) => {
+    setLoading(true);
+    
+    try {
+      const from = (page - 1) * ITEMS_PER_PAGE;
+      const to = from + ITEMS_PER_PAGE - 1;
+      
+      // Get shop items with pagination
+      const { data, error, count } = await supabase
+        .from('shop_items')
+        .select('*', { count: 'exact' })
+        .range(from, to)
+        .order('id', { ascending: true });
+      
+      if (error) {
+        console.error('[Shop] Supabase error:', error);
+      } else {
+        const newItems = data || [];
+        
+        if (append) {
+          setItems(prev => [...prev, ...newItems]);
+        } else {
+          setItems(newItems);
+        }
+        
+        setTotalItems(count || 0);
+        setHasMore(newItems.length === ITEMS_PER_PAGE);
+      }
+    } catch (error) {
+      console.error('[Shop] Error loading items:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  
+  // Load first page on mount
+  useEffect(() => {
+    loadItems(1, false);
+  }, [loadItems]);
+  
+  // Load next page
+  const loadNextPage = () => {
+    if (!loading && hasMore) {
+      const nextPage = currentPage + 1;
+      setCurrentPage(nextPage);
+      loadItems(nextPage, true);
+    }
+  };
 
   useEffect(() => {
     const interval = setInterval(() => setNow(Date.now()), 1000);
@@ -33,8 +82,26 @@ export default function Shop() {
     return `${m}:${s < 10 ? "0" + s : s}`;
   };
 
+  // Only show loading if we have no items AND loading is true
+  if (loading && items.length === 0) {
+    return (
+      <div
+        className="w-full max-w-6xl mx-auto p-4 flex items-center justify-center h-64"
+        style={{ fontFamily: theme.fontFamily, color: theme.textColor }}
+      >
+        <div className="text-center">
+          <div 
+            className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" 
+            style={{ borderColor: theme.primary }}
+          ></div>
+          <p>Loading shop items...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="p-6" style={{ color: theme.textColor }}>
+    <div className="p-6" style={{ color: theme.textColor, fontFamily: theme.fontFamily }}>
       {/* Heading */}
       <h1 className="text-3xl font-bold mb-2">Shop</h1>
       <p className="mb-6" style={{ color: theme.subTextColor }}>Buy exclusive items using your coins!</p>
@@ -42,8 +109,10 @@ export default function Shop() {
       {/* Shop Items Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 mb-8">
         {items.length === 0 && (
-          <div className="col-span-full text-center text-sm" style={{ color: theme.subTextColor }}>
-            No shop items yet. Admin can add items in Admin Panel.
+          <div className="col-span-full text-center py-12" style={{ color: theme.subTextColor }}>
+            <div className="text-6xl mb-4">🛒</div>
+            <p className="text-lg font-medium mb-2">No items available yet</p>
+            <p className="text-sm">Items will appear here when added by the admin</p>
           </div>
         )}
         {items.map((item) => {
@@ -117,10 +186,42 @@ export default function Shop() {
         })}
       </div>
 
+      {/* Pagination Controls */}
+      {items.length > 0 && (
+        <div className="mt-8 flex flex-col items-center gap-4">
+          <div className="text-center">
+            <p className="text-sm" style={{ color: theme.subTextColor }}>
+              Showing {items.length} of {totalItems} items
+            </p>
+          </div>
+          
+          {hasMore && (
+            <button
+              onClick={loadNextPage}
+              disabled={loading}
+              className="px-6 py-2 rounded-lg font-medium transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                backgroundColor: theme.primary || '#3B82F6',
+                color: theme.activeText || '#FFFFFF',
+                border: `1px solid ${theme.primary || '#3B82F6'}`
+              }}
+            >
+              {loading ? 'Loading...' : 'Load More Items'}
+            </button>
+          )}
+          
+          {!hasMore && items.length > 0 && (
+            <p className="text-sm" style={{ color: theme.subTextColor }}>
+              All items loaded
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Buy Button */}
       <button
         disabled={!selectedItem}
-        className={`w-full md:w-auto px-8 py-3 rounded-lg font-semibold transition-all duration-300 ${!selectedItem ? "cursor-not-allowed" : ""}`}
+        className={`w-full md:w-auto px-8 py-3 rounded-lg font-semibold transition-all duration-300 ${!selectedItem ? "cursor-not-allowed" : ""} mt-6`}
         style={{
           background: selectedItem ? theme.buttonColor : theme.disabledButton,
           color: theme.buttonTextColor,
