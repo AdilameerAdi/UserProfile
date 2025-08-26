@@ -117,12 +117,19 @@ export function AuthProvider({ children }) {
 	const loginCredentials = async ({ emailOrName, password, isAdmin = false }) => {
 		
 		if (isAdmin) {
+			// Get admin credentials from localStorage or use defaults
+			const savedCredentials = localStorage.getItem('adminCredentials');
+			const adminCreds = savedCredentials 
+				? JSON.parse(savedCredentials) 
+				: { username: "Adil", password: "Adil" };
+
+
 			// Fallback admin login (legacy). Prefer using profile.is_admin for real admin accounts.
-			if (emailOrName === "Adil" && password === "Adil") {
+			if (emailOrName === adminCreds.username && password === adminCreds.password) {
 				setAuthState({
 					isAuthenticated: true,
 					role: "admin",
-					currentUser: { id: "admin", name: "Adil", email: "", role: "admin" },
+					currentUser: { id: "admin", name: adminCreds.username, email: "", role: "admin" },
 					isLoading: false,
 				});
 				return { ok: true };

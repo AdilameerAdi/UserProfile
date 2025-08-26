@@ -14,36 +14,160 @@ export function DataProvider({ children }) {
   const [store, setStore] = useState(defaultData);
   const [loading, setLoading] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
+  const [error, setError] = useState(null);
+  
+  // Track which data has been loaded
+  const [loadedTabs, setLoadedTabs] = useState({
+    characters: false,
+    ocPackages: false,
+    shopItems: false,
+    wheelRewards: false
+  });
 
-  // Don't load data automatically - wait for admin panel to request it
+  // Don't load everything on mount - wait for specific requests
   useEffect(() => {
-    // Only load if not already loaded and in admin context
-    if (window.location.pathname.includes('/admin') && !dataLoaded) {
-      loadAllData();
-    }
-  }, [dataLoaded]);
+    setDataLoaded(true); // Mark as ready immediately
+  }, []);
 
-  const loadAllData = async () => {
+  // Load specific table data
+  const loadTableData = async (tableName) => {
+    const tableMap = {
+      characters: 'characters',
+      ocPackages: 'oc_packages',
+      shopItems: 'shop_items',
+      wheelRewards: 'wheel_rewards'
+    };
+    
+    // Check if already loaded
+    if (loadedTabs[tableName]) {
+      console.log(`${tableName} already loaded`);
+      return;
+    }
+    
     try {
       setLoading(true);
+      console.log(`Loading ${tableName} from ${tableMap[tableName]}...`);
       
-      // Load all data in parallel
-      const [charactersRes, ocPackagesRes, shopItemsRes, wheelRewardsRes] = await Promise.all([
-        supabase.from("characters").select("*").order("created_at", { ascending: false }),
-        supabase.from("oc_packages").select("*").order("created_at", { ascending: false }),
-        supabase.from("shop_items").select("*").order("created_at", { ascending: false }),
-        supabase.from("wheel_rewards").select("*").order("created_at", { ascending: false })
-      ]);
+      // Create timeout for this specific query
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error(`${tableName} loading timeout`)), 15000)
+      );
+      
+      const queryPromise = supabase
+        .from(tableMap[tableName])
+        .select("*")
+        .limit(100); // Add limit to speed up query
+      
+      const result = await Promise.race([queryPromise, timeoutPromise]);
+      const { data, error } = result;
+      
+      if (error) {
+        console.error(`Error loading ${tableName}:`, error);
+        setError(`Failed to load ${tableName}: ${error.message}`);
+      } else {
+        setStore(prev => ({
+          ...prev,
+          [tableName]: data || []
+        }));
+        setLoadedTabs(prev => ({
+          ...prev,
+          [tableName]: true
+        }));
+        console.log(`✅ Loaded ${data?.length || 0} ${tableName} successfully`);
+      }
+    } catch (error) {
+      console.error(`❌ Failed to load ${tableName}:`, error);
+      setError(`Failed to load ${tableName}: ${error.message}`);
+      
+      // Still mark as loaded with empty array so UI shows "no items" instead of loading forever
+      setStore(prev => ({
+        ...prev,
+        [tableName]: []
+      }));
+      setLoadedTabs(prev => ({
+        ...prev,
+        [tableName]: true
+      }));
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      setStore({
+  // Load data based on active tab
+  const loadDataForTab = async (tab) => {
+    switch(tab) {
+      case 'characters':
+        await loadTableData('characters');
+        break;
+      case 'ocPackages':
+        await loadTableData('ocPackages');
+        break;
+      case 'shopItems':
+        await loadTableData('shopItems');
+        break;
+      case 'wheelRewards':
+        await loadTableData('wheelRewards');
+        break;
+      default:
+        // Load all if no specific tab
+        await loadAllData();
+    }
+  };
+
+  const loadAllData = async () => {
+    if (loading) return; // Prevent duplicate calls
+    
+    try {
+      setLoading(true);
+      setError(null);
+      console.log('Loading all data from Supabase...');
+      
+      // Load all tables
+      const [charactersRes, ocPackagesRes, shopItemsRes, wheelRewardsRes] = await Promise.all([
+        supabase.from("characters").select("*"),
+        supabase.from("oc_packages").select("*"),
+        supabase.from("shop_items").select("*"),
+        supabase.from("wheel_rewards").select("*")
+      ]);
+      
+      // Process results
+      const results = {
         characters: charactersRes.data || [],
         ocPackages: ocPackagesRes.data || [],
         shopItems: shopItemsRes.data || [],
-        wheelRewards: wheelRewardsRes.data || [],
+        wheelRewards: wheelRewardsRes.data || []
+      };
+      
+      // Mark all as loaded
+      setLoadedTabs({
+        characters: true,
+        ocPackages: true,
+        shopItems: true,
+        wheelRewards: true
       });
+      
+      console.log('Data loaded:', {
+        characters: results.characters.length,
+        ocPackages: results.ocPackages.length,
+        shopItems: results.shopItems.length,
+        wheelRewards: results.wheelRewards.length
+      });
+      
+      // Set the store with results
+      setStore(results);
       setDataLoaded(true);
-    } catch {
-      // Error loading data
+      console.log('All data loaded successfully');
+      
+    } catch (error) {
+      console.error('Error loading data:', error);
+      setError(error.message || 'Failed to load data');
+      
+      // Set dataLoaded to true to prevent infinite retry loop
+      setDataLoaded(true);
+      
+      // Set empty store so UI shows "no data" messages
+      setStore(defaultData);
+      
     } finally {
       setLoading(false);
     }
@@ -56,7 +180,7 @@ export function DataProvider({ children }) {
         .from("characters")
         .insert({
           name: character.name || "Unnamed",
-          image_url: character.imageUrl || ""
+          image_url: character.imageUrl || character.image_url || ""
         })
         .select()
         .single();
@@ -69,9 +193,9 @@ export function DataProvider({ children }) {
       }));
 
       return { success: true, data };
-    } catch {
+    } catch (error) {
       // Error adding character
-      return { success: false, error: error.message };
+      return { success: false, error: error?.message || 'Failed to add character' };
     }
   };
 
@@ -81,7 +205,7 @@ export function DataProvider({ children }) {
         .from("characters")
         .update({
           name: updates.name,
-          image_url: updates.imageUrl
+          image_url: updates.imageUrl || updates.image_url || ""
         })
         .eq("id", id)
         .select()
@@ -95,9 +219,9 @@ export function DataProvider({ children }) {
       }));
 
       return { success: true, data };
-    } catch {
+    } catch (error) {
       // Error updating character
-      return { success: false, error: error.message };
+      return { success: false, error: error?.message || 'Failed to update character' };
     }
   };
 
@@ -116,9 +240,9 @@ export function DataProvider({ children }) {
       }));
 
       return { success: true };
-    } catch {
+    } catch (error) {
       // Error removing character
-      return { success: false, error: error.message };
+      return { success: false, error: error?.message || 'Failed to remove character' };
     }
   };
 
@@ -144,9 +268,9 @@ export function DataProvider({ children }) {
       }));
 
       return { success: true, data };
-    } catch {
+    } catch (error) {
       // Error adding OC package
-      return { success: false, error: error.message };
+      return { success: false, error: error?.message || 'Failed to add OC package' };
     }
   };
 
@@ -172,9 +296,9 @@ export function DataProvider({ children }) {
       }));
 
       return { success: true, data };
-    } catch {
+    } catch (error) {
       // Error updating OC package
-      return { success: false, error: error.message };
+      return { success: false, error: error?.message || 'Failed to update OC package' };
     }
   };
 
@@ -193,9 +317,9 @@ export function DataProvider({ children }) {
       }));
 
       return { success: true };
-    } catch {
+    } catch (error) {
       // Error removing OC package
-      return { success: false, error: error.message };
+      return { success: false, error: error?.message || 'Failed to remove OC package' };
     }
   };
 
@@ -211,7 +335,7 @@ export function DataProvider({ children }) {
           offer: Boolean(item.offer) || false,
           offer_end_at: item.offerEndAt || null,
           icon: item.icon || "🛒",
-          image_url: item.imageUrl || ""
+          image_url: item.imageUrl || item.image_url || ""
         })
         .select()
         .single();
@@ -224,9 +348,9 @@ export function DataProvider({ children }) {
       }));
 
       return { success: true, data };
-    } catch {
+    } catch (error) {
       // Error adding shop item
-      return { success: false, error: error.message };
+      return { success: false, error: error?.message || 'Failed to add shop item' };
     }
   };
 
@@ -241,7 +365,7 @@ export function DataProvider({ children }) {
           offer: Boolean(updates.offer),
           offer_end_at: updates.offerEndAt || null,
           icon: updates.icon,
-          image_url: updates.imageUrl || ""
+          image_url: updates.imageUrl || updates.image_url || ""
         })
         .eq("id", id)
         .select()
@@ -255,9 +379,9 @@ export function DataProvider({ children }) {
       }));
 
       return { success: true, data };
-    } catch {
+    } catch (error) {
       // Error updating shop item
-      return { success: false, error: error.message };
+      return { success: false, error: error?.message || 'Failed to update shop item' };
     }
   };
 
@@ -276,9 +400,9 @@ export function DataProvider({ children }) {
       }));
 
       return { success: true };
-    } catch {
+    } catch (error) {
       // Error removing shop item
-      return { success: false, error: error.message };
+      return { success: false, error: error?.message || 'Failed to remove shop item' };
     }
   };
 
@@ -303,9 +427,9 @@ export function DataProvider({ children }) {
       }));
 
       return { success: true, data };
-    } catch {
+    } catch (error) {
       // Error adding wheel reward
-      return { success: false, error: error.message };
+      return { success: false, error: error?.message || 'Failed to add wheel reward' };
     }
   };
 
@@ -330,9 +454,9 @@ export function DataProvider({ children }) {
       }));
 
       return { success: true, data };
-    } catch {
+    } catch (error) {
       // Error updating wheel reward
-      return { success: false, error: error.message };
+      return { success: false, error: error?.message || 'Failed to update wheel reward' };
     }
   };
 
@@ -351,9 +475,9 @@ export function DataProvider({ children }) {
       }));
 
       return { success: true };
-    } catch {
+    } catch (error) {
       // Error removing wheel reward
-      return { success: false, error: error.message };
+      return { success: false, error: error?.message || 'Failed to remove wheel reward' };
     }
   };
 
@@ -415,7 +539,9 @@ export function DataProvider({ children }) {
     () => ({
       store,
       loading,
+      error,
       loadAllData,
+      loadDataForTab,
       addCharacter,
       updateCharacter,
       removeCharacter,
@@ -430,7 +556,7 @@ export function DataProvider({ children }) {
       removeWheelReward,
       uploadFile,
     }),
-    [store, loading]
+    [store, loading, error]
   );
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

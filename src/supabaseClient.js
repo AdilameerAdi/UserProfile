@@ -6,12 +6,8 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    storage: {
-      // Custom storage that doesn't persist anything
-      getItem: () => null,
-      setItem: () => {},
-      removeItem: () => {}
-    },
-    persistSession: false // Don't persist sessions
+    persistSession: true,
+    storageKey: 'supabase.auth.token',
+    storage: window.localStorage
   }
 });

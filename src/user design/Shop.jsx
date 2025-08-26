@@ -4,8 +4,13 @@ import { useData } from "../context/DataContext";
 import { ThemeContext } from "../context/ThemeContext";
 
 export default function Shop() {
-  const { store } = useData();
+  const { store, loadDataForTab } = useData();
   const { theme } = useContext(ThemeContext);
+  
+  // Load shop items when component mounts
+  useEffect(() => {
+    loadDataForTab('shopItems');
+  }, []);
   const [selectedItem, setSelectedItem] = useState(null);
   const [now, setNow] = useState(Date.now());
 
@@ -17,8 +22,8 @@ export default function Shop() {
   }, []);
 
   const timeLeftFor = (it) => {
-    if (!it.offer || !it.offerEndAt) return 0;
-    const end = new Date(it.offerEndAt).getTime();
+    if (!it.offer || !it.offer_end_at) return 0;
+    const end = new Date(it.offer_end_at).getTime();
     return Math.max(0, Math.floor((end - now) / 1000));
   };
 
@@ -58,8 +63,8 @@ export default function Shop() {
               }}
             >
               {/* Image or Icon */}
-              {item.imageUrl ? (
-                <img src={item.imageUrl} alt={item.name} className="w-16 h-16 object-cover rounded mb-2 border" style={{ borderColor: theme.cardBorderColor }} />
+              {item.image_url ? (
+                <img src={item.image_url} alt={item.name} className="w-16 h-16 object-cover rounded mb-2 border" style={{ borderColor: theme.cardBorderColor }} />
               ) : (
                 <div className={`w-12 h-12 flex items-center justify-center rounded-full ${item.color} text-white mb-2 text-xl`}>
                   {typeof item.icon === "string" ? item.icon : <span>🛒</span>}

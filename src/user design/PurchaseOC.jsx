@@ -6,8 +6,13 @@ import { useAuth } from "../signup/AuthContext";
 
 export default function PurchaseOC() {
   const { theme } = useContext(ThemeContext);
-  const { store } = useData();
+  const { store, loadDataForTab } = useData();
   const { addCoins } = useAuth();
+  
+  // Load OC packages when component mounts
+  useEffect(() => {
+    loadDataForTab('ocPackages');
+  }, []);
 
   const [selectedPackage, setSelectedPackage] = useState(null);
   const [now, setNow] = useState(Date.now());
@@ -21,8 +26,8 @@ export default function PurchaseOC() {
   }, []);
 
   const timeLeftFor = (pkg) => {
-    if (!pkg.offer || !pkg.offerEndAt) return 0;
-    const end = new Date(pkg.offerEndAt).getTime();
+    if (!pkg.offer || !pkg.offer_end_at) return 0;
+    const end = new Date(pkg.offer_end_at).getTime();
     return Math.max(0, Math.floor((end - now) / 1000));
   };
 

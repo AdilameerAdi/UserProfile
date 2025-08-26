@@ -1,4 +1,4 @@
-import { useContext, useMemo, useState } from "react";
+import { useContext, useMemo, useState, useEffect } from "react";
 import { ThemeContext } from "../context/ThemeContext";
 import { useData } from "../context/DataContext";
 
@@ -7,6 +7,9 @@ export default function Admin({ activeTab, setActiveTab }) {
   const {
     store,
     loading,
+    error,
+    loadAllData,
+    loadDataForTab,
     uploadFile,
     addCharacter,
     updateCharacter,
@@ -21,6 +24,13 @@ export default function Admin({ activeTab, setActiveTab }) {
     updateWheelReward,
     removeWheelReward,
   } = useData();
+
+  // Load data for the active tab when it changes
+  useEffect(() => {
+    if (activeTab) {
+      loadDataForTab(activeTab);
+    }
+  }, [activeTab]);
 
   // activeTab and setActiveTab are now passed as props
   
@@ -57,12 +67,20 @@ export default function Admin({ activeTab, setActiveTab }) {
       finalImageUrl = await uploadFile(character._file);
     }
     const payload = { name: character.name.trim(), imageUrl: finalImageUrl || "" };
+    
+    let result;
     if (isEditing && edit.type === "character") {
-      await updateCharacter?.(edit.id, payload);
+      result = await updateCharacter?.(edit.id, payload);
     } else {
-      await addCharacter(payload);
+      result = await addCharacter(payload);
     }
-    resetAll();
+    
+    if (result?.success) {
+      console.log('Character saved successfully');
+      resetAll();
+    } else {
+      alert(`Failed to save character: ${result?.error || 'Unknown error'}`);
+    }
   };
 
   const savePkg = async () => {
@@ -72,12 +90,20 @@ export default function Admin({ activeTab, setActiveTab }) {
       offerEndAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
     }
     const payload = { coins: pkg.coins, price: pkg.price, offer: pkg.offer, offerEndAt };
+    
+    let result;
     if (isEditing && edit.type === "pkg") {
-      await updateOcPackage?.(edit.id, payload);
+      result = await updateOcPackage?.(edit.id, payload);
     } else {
-      await addOcPackage(payload);
+      result = await addOcPackage(payload);
     }
-    resetAll();
+    
+    if (result?.success) {
+      console.log('OC Package saved successfully');
+      resetAll();
+    } else {
+      alert(`Failed to save OC Package: ${result?.error || 'Unknown error'}`);
+    }
   };
 
   const saveItem = async () => {
@@ -93,23 +119,39 @@ export default function Admin({ activeTab, setActiveTab }) {
     }
 
     const payload = { ...item, offerEndAt, imageUrl: finalImageUrl };
+    
+    let result;
     if (isEditing && edit.type === "item") {
-      await updateShopItem?.(edit.id, payload);
+      result = await updateShopItem?.(edit.id, payload);
     } else {
-      await addShopItem(payload);
+      result = await addShopItem(payload);
     }
-    resetAll();
+    
+    if (result?.success) {
+      console.log('Shop item saved successfully');
+      resetAll();
+    } else {
+      alert(`Failed to save shop item: ${result?.error || 'Unknown error'}`);
+    }
   };
 
   const saveReward = async () => {
     if (!reward.name.trim()) return alert("Enter reward name");
     const payload = { name: reward.name.trim(), color: reward.color || "bg-yellow-500", icon: reward.icon || "🎁" };
+    
+    let result;
     if (isEditing && edit.type === "reward") {
-      await updateWheelReward?.(edit.id, payload);
+      result = await updateWheelReward?.(edit.id, payload);
     } else {
-      await addWheelReward(payload);
+      result = await addWheelReward(payload);
     }
-    resetAll();
+    
+    if (result?.success) {
+      console.log('Wheel reward saved successfully');
+      resetAll();
+    } else {
+      alert(`Failed to save wheel reward: ${result?.error || 'Unknown error'}`);
+    }
   };
 
   const loadForEdit = (type, obj) => {
@@ -143,6 +185,31 @@ export default function Admin({ activeTab, setActiveTab }) {
   };
 
   const renderTabContent = () => {
+    // Show loading for specific tab if data is loading
+    if (loading) {
+      return (
+        <div className="flex items-center justify-center h-32">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-2" style={{ borderColor: theme.primary }}></div>
+            <p className="text-sm">Loading {activeTab}...</p>
+            <p className="text-xs mt-2" style={{ color: theme.subTextColor }}>
+              This may take a moment due to network latency
+            </p>
+            <button 
+              className="mt-2 px-3 py-1 text-xs rounded"
+              style={{ background: theme.buttonColor, color: theme.buttonTextColor }}
+              onClick={() => {
+                setLoading(false);
+                console.log('Loading cancelled by user');
+              }}
+            >
+              Skip Loading
+            </button>
+          </div>
+        </div>
+      );
+    }
+    
     switch (activeTab) {
       case "characters":
         return (
@@ -398,19 +465,26 @@ export default function Admin({ activeTab, setActiveTab }) {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64" style={{ color: theme.textColor }}>
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" style={{ borderColor: theme.primary }}></div>
-          <p>Loading admin data...</p>
-        </div>
-      </div>
-    );
-  }
+  // Don't block the whole UI for loading
+  // Show loading indicator per tab instead
 
   return (
     <div className="space-y-8" style={{ color: theme.textColor, fontFamily: theme.fontFamily }}>
+      {/* Refresh Button */}
+      <div className="flex justify-end">
+        <button
+          onClick={loadAllData}
+          disabled={loading}
+          className="px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200"
+          style={{
+            background: loading ? theme.disabledButton : theme.buttonColor,
+            color: theme.buttonTextColor,
+            cursor: loading ? 'not-allowed' : 'pointer'
+          }}
+        >
+          {loading ? 'Loading...' : '🔄 Refresh Data'}
+        </button>
+      </div>
       {renderTabContent()}
     </div>
   );

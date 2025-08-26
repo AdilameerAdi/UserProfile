@@ -1,10 +1,15 @@
-import { useContext } from "react";
+import { useContext, useEffect } from "react";
 import { ThemeContext } from "../context/ThemeContext";
 import { useData } from "../context/DataContext";
 
 export default function Characters() {
   const { theme } = useContext(ThemeContext);
-  const { store, loading } = useData();
+  const { store, loading, loadDataForTab } = useData();
+  
+  // Load characters when component mounts
+  useEffect(() => {
+    loadDataForTab('characters');
+  }, []);
 
   const characters = store.characters;
 

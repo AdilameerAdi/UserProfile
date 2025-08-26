@@ -1,11 +1,16 @@
-import { useState, useContext } from "react";
+import { useState, useContext, useEffect } from "react";
 import { FaCoins } from "react-icons/fa";
 import { ThemeContext } from "../context/ThemeContext";
 import { useData } from "../context/DataContext";
 
 export default function FortuneWheel() {
   const { theme } = useContext(ThemeContext);
-  const { store } = useData();
+  const { store, loadDataForTab } = useData();
+  
+  // Load wheel rewards when component mounts
+  useEffect(() => {
+    loadDataForTab('wheelRewards');
+  }, []);
 
   const [spinsLeft, setSpinsLeft] = useState(3);
   const [spinning, setSpinning] = useState(false);
