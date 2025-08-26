@@ -61,6 +61,7 @@ export default function AuthCard({
               className="p-3 rounded-lg bg-[#364153] text-white focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              autoComplete={isAdmin ? "username" : "email"}
               required
             />
             <input
@@ -69,6 +70,7 @@ export default function AuthCard({
               className="p-3 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
               required
             />
             {error && <p className="text-red-500 text-sm">{error}</p>}
@@ -146,6 +148,7 @@ export default function AuthCard({
               className="p-3 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-gray-400"
               value={signupName}
               onChange={(e) => setSignupName?.(e.target.value)}
+              autoComplete="name"
               required
             />
             <input
@@ -154,6 +157,7 @@ export default function AuthCard({
               className="p-3 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-gray-400"
               value={signupEmail}
               onChange={(e) => setSignupEmail?.(e.target.value)}
+              autoComplete="email"
               required
             />
             <input
@@ -162,6 +166,7 @@ export default function AuthCard({
               className="p-3 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-gray-400"
               value={signupPassword}
               onChange={(e) => setSignupPassword?.(e.target.value)}
+              autoComplete="new-password"
               required
             />
             <input
@@ -170,6 +175,7 @@ export default function AuthCard({
               className="p-3 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-gray-400"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword?.(e.target.value)}
+              autoComplete="new-password"
               required
             />
 

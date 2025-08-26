@@ -1,14 +1,81 @@
-import { useContext, useMemo, useState, useEffect } from "react";
+import { useContext, useMemo, useState, useEffect, useRef } from "react";
 import { ThemeContext } from "../context/ThemeContext";
 import { useData } from "../context/DataContext";
+import { supabase } from "../supabaseClient";
+
+// Optimized tiny image component for admin list
+function AdminCharacterImage({ src, alt, theme, size = "8" }) {
+  const [imageStatus, setImageStatus] = useState('loading');
+  const [isInView, setIsInView] = useState(false);
+  const imgRef = useRef(null);
+  const observerRef = useRef(null);
+
+  useEffect(() => {
+    observerRef.current = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsInView(true);
+          observerRef.current?.disconnect();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (imgRef.current) {
+      observerRef.current.observe(imgRef.current);
+    }
+
+    return () => observerRef.current?.disconnect();
+  }, []);
+
+  const sizeClass = `h-${size} w-${size}`;
+
+  return (
+    <div ref={imgRef} className={`${sizeClass} rounded relative overflow-hidden flex-shrink-0`}>
+      {imageStatus === 'loading' && (
+        <div 
+          className={`${sizeClass} flex items-center justify-center`}
+          style={{ backgroundColor: theme.inactiveTabBg, borderColor: theme.cardBorderColor }}
+        >
+          <div 
+            className="w-3 h-3 border border-t-transparent rounded-full animate-spin"
+            style={{ borderColor: theme.primary, borderTopColor: 'transparent' }}
+          />
+        </div>
+      )}
+      
+      {isInView && src && (
+        <img
+          src={src}
+          alt={alt}
+          className={`${sizeClass} object-cover absolute inset-0`}
+          loading="lazy"
+          decoding="async"
+          onLoad={() => setImageStatus('loaded')}
+          onError={() => setImageStatus('error')}
+          style={{
+            opacity: imageStatus === 'loaded' ? 1 : 0,
+            transition: 'opacity 0.3s ease-in-out'
+          }}
+        />
+      )}
+      
+      {(imageStatus === 'error' || !src) && (
+        <div 
+          className={`${sizeClass} border flex items-center justify-center text-xs`}
+          style={{ background: theme.inactiveTabBg, borderColor: theme.cardBorderColor }}
+        >
+          🧙‍♂️
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Admin({ activeTab, setActiveTab }) {
   const { theme } = useContext(ThemeContext);
   const {
     store,
-    loading,
-    loadAllData,
-    loadDataForTab,
     uploadFile,
     addCharacter,
     updateCharacter,
@@ -24,10 +91,56 @@ export default function Admin({ activeTab, setActiveTab }) {
     removeWheelReward,
   } = useData();
 
-  // Load data for the active tab when it changes
+  // Pagination state for characters
+  const [characters, setCharacters] = useState([]);
+  const [charactersLoading, setCharactersLoading] = useState(false);
+  const [charactersPage, setCharactersPage] = useState(1);
+  const [totalCharacters, setTotalCharacters] = useState(0);
+  const [hasMoreCharacters, setHasMoreCharacters] = useState(true);
+  
+  const CHARACTERS_PER_PAGE = 5;
+
+  // Load characters with pagination
+  const loadCharactersPaginated = async (page = 1, append = false) => {
+    setCharactersLoading(true);
+    
+    try {
+      const from = (page - 1) * CHARACTERS_PER_PAGE;
+      const to = from + CHARACTERS_PER_PAGE - 1;
+      
+      const { data, error, count } = await supabase
+        .from('characters')
+        .select('*', { count: 'exact' })
+        .range(from, to)
+        .order('id', { ascending: true });
+      
+      if (error) {
+        console.error('[Admin] Characters load error:', error);
+      } else {
+        const newCharacters = data || [];
+        
+        if (append) {
+          setCharacters(prev => [...prev, ...newCharacters]);
+        } else {
+          setCharacters(newCharacters);
+        }
+        
+        setTotalCharacters(count || 0);
+        setHasMoreCharacters(newCharacters.length === CHARACTERS_PER_PAGE);
+        
+      }
+    } catch (error) {
+      console.error('[Admin] Error loading characters:', error);
+    } finally {
+      setCharactersLoading(false);
+    }
+  };
+
+  // Load characters when activeTab is characters
   useEffect(() => {
-    if (activeTab) {
-      loadDataForTab(activeTab);
+    if (activeTab === 'characters') {
+      loadCharactersPaginated(1, false);
+      setCharactersPage(1);
     }
   }, [activeTab]);
 
@@ -180,8 +293,8 @@ export default function Admin({ activeTab, setActiveTab }) {
   };
 
   const renderTabContent = () => {
-    // Show loading for specific tab if data is loading
-    if (loading) {
+    // Show loading for characters tab if data is loading
+    if (activeTab === 'characters' && charactersLoading && characters.length === 0) {
       return (
         <div className="flex items-center justify-center h-32">
           <div className="text-center">
@@ -228,7 +341,14 @@ export default function Admin({ activeTab, setActiveTab }) {
                   }} />
                 </label>
               </div>
-              {(character.imageUrl || character._previewUrl) && <img src={character.imageUrl || character._previewUrl} alt="preview" className="h-24 w-24 object-cover rounded-lg border" style={{ borderColor: theme.cardBorderColor }} />}
+              {(character.imageUrl || character._previewUrl) && (
+                <AdminCharacterImage 
+                  src={character.imageUrl || character._previewUrl} 
+                  alt="preview" 
+                  theme={theme} 
+                  size="24" 
+                />
+              )}
               <div className="flex gap-2">
                 <button className="px-4 py-2 rounded" style={{ background: theme.buttonColor, color: theme.buttonTextColor }} onClick={saveCharacter}>{isEditing && edit.type === "character" ? "Update" : "Add"}</button>
                 {isEditing && edit.type === "character" && <button className="px-4 py-2 rounded" style={{ background: theme.disabledButton, color: theme.textColor }} onClick={resetAll}>Cancel</button>}
@@ -237,10 +357,15 @@ export default function Admin({ activeTab, setActiveTab }) {
             <div className="p-4 rounded-xl border" style={{ background: theme.cardBackground, borderColor: theme.cardBorderColor }}>
               <h3 className="text-lg font-semibold mb-2">Existing Characters</h3>
               <ul className="space-y-2 text-sm">
-                {store.characters.map((c) => (
+                {characters.map((c) => (
                   <li key={c.id} className="flex items-center justify-between gap-3 p-2 rounded border" style={listRowStyle}>
                     <div className="flex items-center gap-2">
-                      {c.image_url ? <img src={c.image_url} className="h-8 w-8 rounded object-cover" /> : <div className="h-8 w-8 rounded border" style={{ background: theme.inactiveTabBg, borderColor: theme.cardBorderColor }} />}
+                      <AdminCharacterImage 
+                        src={c.image_url} 
+                        alt={c.name} 
+                        theme={theme} 
+                        size="8" 
+                      />
                       <span>{c.name}</span>
                     </div>
                     <div className="flex gap-2">
@@ -250,6 +375,31 @@ export default function Admin({ activeTab, setActiveTab }) {
                   </li>
                 ))}
               </ul>
+              
+              {/* Characters Pagination */}
+              <div className="mt-4 flex flex-col gap-2">
+                <div className="text-xs" style={{ color: theme.subTextColor }}>
+                  Showing {characters.length} of {totalCharacters} characters
+                </div>
+                
+                {hasMoreCharacters && (
+                  <button
+                    onClick={() => {
+                      const nextPage = charactersPage + 1;
+                      setCharactersPage(nextPage);
+                      loadCharactersPaginated(nextPage, true);
+                    }}
+                    disabled={charactersLoading}
+                    className="px-3 py-1 rounded text-xs font-medium transition-all duration-300 hover:scale-105 disabled:opacity-50"
+                    style={{
+                      backgroundColor: theme.primary || '#3B82F6',
+                      color: theme.activeText || '#FFFFFF'
+                    }}
+                  >
+                    {charactersLoading ? 'Loading...' : 'Load More'}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         );
@@ -468,16 +618,21 @@ export default function Admin({ activeTab, setActiveTab }) {
       {/* Refresh Button */}
       <div className="flex justify-end">
         <button
-          onClick={loadAllData}
-          disabled={loading}
+          onClick={() => {
+            if (activeTab === 'characters') {
+              loadCharactersPaginated(1, false);
+              setCharactersPage(1);
+            }
+          }}
+          disabled={charactersLoading}
           className="px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200"
           style={{
-            background: loading ? theme.disabledButton : theme.buttonColor,
+            background: charactersLoading ? theme.disabledButton : theme.buttonColor,
             color: theme.buttonTextColor,
-            cursor: loading ? 'not-allowed' : 'pointer'
+            cursor: charactersLoading ? 'not-allowed' : 'pointer'
           }}
         >
-          {loading ? 'Loading...' : '🔄 Refresh Data'}
+          {charactersLoading ? 'Loading...' : '🔄 Refresh Data'}
         </button>
       </div>
       {renderTabContent()}
