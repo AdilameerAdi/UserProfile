@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useMemo, useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "../supabaseClient";
 
 const defaultData = {
@@ -7,6 +7,7 @@ const defaultData = {
   shopItems: [], // { id, name, price, color, offer, offer_end_at, icon, image_url }
   wheelRewards: [], // { id, name, color, icon }
 };
+
 
 const DataContext = createContext();
 
@@ -23,10 +24,15 @@ export function DataProvider({ children }) {
     wheelRewards: false
   });
 
-  // Don't load everything on mount - wait for specific requests
 
-  // Load specific table data
-  const loadTableData = async (tableName) => {
+  // Use useRef to store loadedTabs to avoid dependency issues
+  const loadedTabsRef = useRef(loadedTabs);
+  loadedTabsRef.current = loadedTabs;
+
+  // Load data based on active tab - memoized to prevent infinite re-renders
+  const loadDataForTab = useCallback(async (tab) => {
+    // Function disabled to prevent infinite loops
+    return;
     const tableMap = {
       characters: 'characters',
       ocPackages: 'oc_packages',
@@ -34,78 +40,54 @@ export function DataProvider({ children }) {
       wheelRewards: 'wheel_rewards'
     };
     
-    // Check if already loaded
-    if (loadedTabs[tableName]) {
+    // console.log(`[DataContext] Loading data for ${tab}...`);
+    
+    // Check if already loaded recently using ref
+    if (loadedTabsRef.current[tab]) {
+      console.log(`[DataContext] ${tab} already loaded, skipping`);
       return;
     }
     
+    setLoading(true);
+    
     try {
-      setLoading(true);
+      // console.log(`[DataContext] Querying ${tableMap[tab]} table...`);
       
-      // Create timeout for this specific query
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error(`${tableName} loading timeout`)), 15000)
-      );
+      // Simple, direct query without any optimization that might cause issues
+      const { data, error } = await supabase
+        .from(tableMap[tab])
+        .select("*");
       
-      const queryPromise = supabase
-        .from(tableMap[tableName])
-        .select("*")
-        .limit(100); // Add limit to speed up query
-      
-      const result = await Promise.race([queryPromise, timeoutPromise]);
-      const { data, error } = result;
+      console.log(`[DataContext] Query result for ${tab}:`, { data, error });
       
       if (error) {
-        console.error(`Error loading ${tableName}:`, error);
-        setError(`Failed to load ${tableName}: ${error.message}`);
-      } else {
-        setStore(prev => ({
-          ...prev,
-          [tableName]: data || []
-        }));
-        setLoadedTabs(prev => ({
-          ...prev,
-          [tableName]: true
-        }));
+        throw error;
       }
-    } catch (error) {
-      console.error(`❌ Failed to load ${tableName}:`, error);
-      setError(`Failed to load ${tableName}: ${error.message}`);
       
-      // Still mark as loaded with empty array so UI shows "no items" instead of loading forever
-      setStore(prev => ({
-        ...prev,
-        [tableName]: []
-      }));
-      setLoadedTabs(prev => ({
-        ...prev,
-        [tableName]: true
-      }));
+      const resultData = data || [];
+      console.log(`[DataContext] Found ${resultData.length} items for ${tab}`);
+      
+      // Update store and mark as loaded
+      setStore(prev => ({ ...prev, [tab]: resultData }));
+      setLoadedTabs(prev => ({ ...prev, [tab]: true }));
+      
+      // Clear any previous errors
+      setError(null);
+      
+    } catch (error) {
+      console.error(`[DataContext] Error loading ${tab}:`, error);
+      
+      // Set empty array so UI shows "no items" instead of loading forever
+      setStore(prev => ({ ...prev, [tab]: [] }));
+      setLoadedTabs(prev => ({ ...prev, [tab]: true }));
+      
+      // Show error message
+      setError(`Failed to load ${tab}: ${error.message}`);
     } finally {
       setLoading(false);
+      console.log(`[DataContext] Finished loading ${tab}`);
     }
-  };
-
-  // Load data based on active tab
-  const loadDataForTab = async (tab) => {
-    switch(tab) {
-      case 'characters':
-        await loadTableData('characters');
-        break;
-      case 'ocPackages':
-        await loadTableData('ocPackages');
-        break;
-      case 'shopItems':
-        await loadTableData('shopItems');
-        break;
-      case 'wheelRewards':
-        await loadTableData('wheelRewards');
-        break;
-      default:
-        // Load all if no specific tab
-        await loadAllData();
-    }
-  };
+  }, []); // No dependencies now
 
   const loadAllData = async () => {
     if (loading) return; // Prevent duplicate calls
@@ -461,58 +443,33 @@ export function DataProvider({ children }) {
     }
   };
 
-  // File upload helper: Optimized for speed - use data URL directly
+  // File upload helper: Optimized with compression for character images
   const uploadFile = async (file) => {
     if (!file) return "";
 
-    // For faster uploads, convert directly to data URL
-    // This is instant and works reliably
+    // Check if it's an image file that needs compression
+    if (file.type.startsWith('image/')) {
+      try {
+        // Import the optimizer dynamically to avoid bundle bloat
+        const { getOptimizedImageDataUrl } = await import('../utils/imageOptimizer.js');
+        
+        // Compress image for better performance
+        // Characters are displayed at ~160px height, so 400px is plenty
+        const optimizedDataUrl = await getOptimizedImageDataUrl(file, 400, 0.8);
+        return optimizedDataUrl;
+      } catch (error) {
+        console.log('Image optimization failed, using original size');
+        // Fall back to original if compression fails
+      }
+    }
+
+    // For non-images or if compression fails, use original approach
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result?.toString() || "");
       reader.onerror = reject;
       reader.readAsDataURL(file);
     });
-
-    // Optional: If you want to try Supabase Storage first but with timeout
-    /*
-    try {
-      // Set a timeout for Supabase upload
-      const uploadPromise = new Promise(async (resolve, reject) => {
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-        const filePath = `uploads/${fileName}`;
-
-        const { error } = await supabase.storage
-          .from('images')
-          .upload(filePath, file);
-
-        if (error) throw error;
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('images')
-          .getPublicUrl(filePath);
-
-        resolve(publicUrl);
-      });
-
-      // Race between upload and timeout (3 seconds)
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Upload timeout')), 3000)
-      );
-
-      return await Promise.race([uploadPromise, timeoutPromise]);
-    } catch (error) {
-      // Using data URL fallback for faster upload
-      // Fast fallback to data URL
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result?.toString() || "");
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-    }
-    */
   };
 
   const value = useMemo(
@@ -540,7 +497,6 @@ export function DataProvider({ children }) {
       store, 
       loading, 
       error, 
-      loadAllData, 
       loadDataForTab,
       addCharacter,
       updateCharacter,
