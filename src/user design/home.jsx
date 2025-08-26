@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { FaEdit, FaImage } from "react-icons/fa";
 import { useAuth } from "../signup/AuthContext";
-
+import backcard from "../img/homeback.png";
 import { loadProfilePhotos, DEFAULT_AVATARS } from "../constants/profilePhotos";
 
 export default function Home() {
@@ -77,71 +77,73 @@ export default function Home() {
   };
 
   return (
-    
-    <div className="min-h-screen bg-gray-900 flex items-center justify-center p-6">
-      {/* Outer Card */}
-      <div className="bg-gray-200 shadow-xl rounded-2xl p-10 max-w-3xl w-full flex flex-col items-center">
-        <h1 className="text-3xl font-bold mb-6 text-gray-800">User Profile</h1>
+    <div
+      className="min-h-screen flex items-center justify-center p-6"
+      style={{
+        backgroundImage: `url(${backcard})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+      }}
+    >
+      {/* Inner Card */}
+      <div className="bg-gray-400 shadow-md rounded-xl p-6 w-full max-w-sm text-center">
+        <h1 className="text-5xl font-extrabold mb-6 text-green-600">User Profile</h1>
+        {/* Profile Photo */}
+        <div className="mb-6 flex justify-center">
+          <img
+            src={profilePhoto}
+            alt="Profile"
+            className="w-28 h-28 rounded-full object-cover border-4 border-blue-400 shadow-md"
+            loading="lazy"
+            onError={(e) => {
+              e.target.src = DEFAULT_AVATARS[0];
+            }}
+          />
+        </div>
 
-        {/* Inner Card */}
-        <div className="bg-gray-400 shadow-md rounded-xl p-6 w-full max-w-sm text-center">
-          {/* Profile Photo */}
-          <div className="mb-6 flex justify-center">
-            <img
-              src={profilePhoto}
-              alt="Profile"
-              className="w-28 h-28 rounded-full object-cover border-4 border-blue-400 shadow-md"
-              loading="lazy"
-              onError={(e) => {
-                // Fallback to first default avatar if image fails to load
-                e.target.src = DEFAULT_AVATARS[0];
-              }}
+        {/* User Info */}
+        <div className="mb-6">
+          {isEditingName ? (
+            <input
+              type="text"
+              value={userName}
+              onChange={(e) => setUserName(e.target.value)}
+              className="border text-white p-2 rounded w-2/3 text-center"
+              autoFocus
             />
-          </div>
+          ) : (
+            <h2 className="text-xl text-white font-semibold">{userName}</h2>
+          )}
+          <p className="text-gray-500">{email}</p>
+          {saveError && <p className="text-red-600 text-sm mt-2">{saveError}</p>}
+        </div>
 
-          {/* User Info */}
-          <div className="mb-6">
-            {isEditingName ? (
-              <input
-                type="text"
-                value={userName}
-                onChange={(e) => setUserName(e.target.value)}
-                className="border text-white p-2 rounded w-2/3 text-center"
-                autoFocus
-              />
-            ) : (
-              <h2 className="text-xl text-white font-semibold">{userName}</h2>
-            )}
-            <p className="text-gray-500">{email}</p>
-            {saveError && <p className="text-red-600 text-sm mt-2">{saveError}</p>}
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row justify-center gap-3">
-            {isEditingName ? (
-              <button
-                onClick={handleSaveName}
-                disabled={savingName}
-                className="px-5 py-2 bg-green-500 text-black rounded-lg hover:bg-green-600 disabled:opacity-60"
-              >
-                {savingName ? "Saving..." : "Save Name"}
-              </button>
-            ) : (
-              <button
-                onClick={() => setIsEditingName(true)}
-                className="flex items-center gap-2 px-5 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-              >
-                <FaEdit /> Change Name
-              </button>
-            )}
-
+        {/* Action Buttons */}
+        <div className="flex flex-col sm:flex-row justify-center gap-3">
+          {isEditingName ? (
             <button
-              onClick={() => setIsGalleryOpen(true)}
-              className="flex items-center gap-2 px-5 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600"
+              onClick={handleSaveName}
+              disabled={savingName}
+              className="px-5 py-2 bg-green-500 text-black rounded-lg hover:bg-green-600 disabled:opacity-60"
             >
-              <FaImage /> Change Avatar
+              {savingName ? "Saving..." : "Save Name"}
             </button>
-          </div>
+          ) : (
+            <button
+              onClick={() => setIsEditingName(true)}
+              className="flex items-center gap-2 px-5 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+            >
+              <FaEdit /> Change Name
+            </button>
+          )}
+
+          <button
+            onClick={() => setIsGalleryOpen(true)}
+            className="flex items-center gap-2 px-5 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600"
+          >
+            <FaImage /> Change Avatar
+          </button>
         </div>
       </div>
 
@@ -186,4 +188,4 @@ export default function Home() {
       )}
     </div>
   );
-}  
+}

@@ -1,36 +1,27 @@
 import { useContext } from "react";
 import { ThemeContext } from "../context/ThemeContext";
 import logo from "../img/logo.png";
+import downloadback from "../img/download.png";
 
 export default function Download() {
   const { theme } = useContext(ThemeContext);
 
   return (
     <div
-      className="flex flex-col items-center justify-center h-full text-center px-6 transition-colors duration-300"
-      style={{ fontFamily: theme.fontFamily }}
+      className="flex flex-col items-center justify-center min-h-screen w-full px-6"
+      style={{
+        fontFamily: theme.fontFamily,
+        backgroundImage: `url(${downloadback})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+      }}
     >
-      {/* Title Section (Aligned Left) */}
-      <div className="w-full max-w-4xl text-left mb-6">
-        <h1
-          className="text-4xl font-bold mb-2 transition-colors duration-300"
-          style={{ color: theme.titleColor }}
-        >
-          Download
-        </h1>
-        <p
-          className="text-lg italic transition-colors duration-300"
-          style={{ color: theme.subTextColor }}
-        >
-          Download the game to start playing!
-        </p>
-      </div>
-
       {/* Download Card (Centered) */}
       <div
-        className="border rounded-xl p-10 shadow-lg w-full text-center transition-colors duration-300"
+        className="border rounded-xl p-10 shadow-lg w-full max-w-lg text-center backdrop-blur-md"
         style={{
-          background: theme.cardBackground, // dynamic card gradient or color
+          backgroundColor: "rgba(255, 255, 255, 0.2)", // transparent card
           borderColor: theme.cardBorderColor,
         }}
       >
@@ -38,15 +29,11 @@ export default function Download() {
         <div className="flex flex-col items-center mb-6">
           <img src={logo} alt="Olympus Logo" className="w-24 mb-4" />
           <h2
-            className="text-3xl font-extrabold transition-colors duration-300"
-            style={{ color: theme.titleColor }}
+            className="text-3xl font-extrabold text-white"
           >
             Download the game
           </h2>
-          <p
-            className="mt-2 transition-colors duration-300"
-            style={{ color: theme.subTextColor }}
-          >
+          <p className="mt-2 text-white">
             Download the game to start playing!
           </p>
         </div>
@@ -79,10 +66,7 @@ export default function Download() {
         </a>
 
         {/* Help Text */}
-        <p
-          className="text-sm mt-6 transition-colors duration-300"
-          style={{ color: theme.subTextColor }}
-        >
+        <p className="text-sm mt-6 text-white">
           Need help with installation? Visit our support page or join our Discord
           community for assistance.
         </p>
