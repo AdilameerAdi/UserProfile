@@ -88,7 +88,7 @@ export default function Home() {
     >
       {/* Inner Card */}
       <div className="bg-gray-400 shadow-md rounded-xl p-6 w-full max-w-sm text-center">
-        <h1 className="text-5xl font-extrabold mb-6 text-blue-600">User Profile</h1>
+        <h1 className="text-5xl font-extrabold mb-6 text-gray-600">User Profile</h1>
         {/* Profile Photo */}
         <div className="mb-6 flex justify-center">
           <img
