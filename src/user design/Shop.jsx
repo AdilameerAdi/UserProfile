@@ -2,6 +2,8 @@ import { useState, useEffect, useContext, useCallback } from "react";
 import { FaCoins } from "react-icons/fa";
 import { ThemeContext } from "../context/ThemeContext";
 import { supabase } from "../supabaseClient";
+import eneba from "../img/eneba.png";
+import rewarble from "../img/rewarble.png";
 
 export default function Shop() {
   const { theme } = useContext(ThemeContext);
@@ -12,51 +14,49 @@ export default function Shop() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [hasMore, setHasMore] = useState(true);
-  
+
+  // Added states for payment modal (same as PurchaseOC)
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState(null);
+  const [purchasing, setPurchasing] = useState(false);
+
   const ITEMS_PER_PAGE = 12;
 
-  // Load shop items with pagination
   const loadItems = useCallback(async (page = 1, append = false) => {
     setLoading(true);
-    
     try {
       const from = (page - 1) * ITEMS_PER_PAGE;
       const to = from + ITEMS_PER_PAGE - 1;
-      
-      // Get shop items with pagination
+
       const { data, error, count } = await supabase
-        .from('shop_items')
-        .select('*', { count: 'exact' })
+        .from("shop_items")
+        .select("*", { count: "exact" })
         .range(from, to)
-        .order('id', { ascending: true });
-      
+        .order("id", { ascending: true });
+
       if (error) {
-        console.error('[Shop] Supabase error:', error);
+        console.error("[Shop] Supabase error:", error);
       } else {
         const newItems = data || [];
-        
         if (append) {
-          setItems(prev => [...prev, ...newItems]);
+          setItems((prev) => [...prev, ...newItems]);
         } else {
           setItems(newItems);
         }
-        
         setTotalItems(count || 0);
         setHasMore(newItems.length === ITEMS_PER_PAGE);
       }
     } catch (error) {
-      console.error('[Shop] Error loading items:', error);
+      console.error("[Shop] Error loading items:", error);
     } finally {
       setLoading(false);
     }
   }, []);
-  
-  // Load first page on mount
+
   useEffect(() => {
     loadItems(1, false);
   }, [loadItems]);
-  
-  // Load next page
+
   const loadNextPage = () => {
     if (!loading && hasMore) {
       const nextPage = currentPage + 1;
@@ -82,7 +82,37 @@ export default function Shop() {
     return `${m}:${s < 10 ? "0" + s : s}`;
   };
 
-  // Only show loading if we have no items AND loading is true
+  // Handle Buy button click - show payment modal
+  const handlePurchaseClick = () => {
+    if (!selectedItem) return;
+    setShowPaymentModal(true);
+  };
+
+  // Confirm Purchase (simulate payment like PurchaseOC)
+  const confirmPurchase = async () => {
+    if (!selectedItem || !selectedPayment) return;
+    const selectedIt = items.find((it) => it.id === selectedItem);
+    if (!selectedIt) return;
+
+    setPurchasing(true);
+    setShowPaymentModal(false);
+
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 2000)); // simulate payment
+      alert(
+        `Success! You purchased "${selectedIt.name}" for ${Number(
+          selectedIt.price
+        ).toLocaleString()} coins using ${selectedPayment.toUpperCase()}`
+      );
+      setSelectedItem(null);
+      setSelectedPayment(null);
+    } catch {
+      alert("Purchase failed. Please try again.");
+    } finally {
+      setPurchasing(false);
+    }
+  };
+
   if (loading && items.length === 0) {
     return (
       <div
@@ -90,8 +120,8 @@ export default function Shop() {
         style={{ fontFamily: theme.fontFamily, color: theme.textColor }}
       >
         <div className="text-center">
-          <div 
-            className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" 
+          <div
+            className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4"
             style={{ borderColor: theme.primary }}
           ></div>
           <p>Loading shop items...</p>
@@ -102,11 +132,9 @@ export default function Shop() {
 
   return (
     <div className="p-6" style={{ color: theme.textColor, fontFamily: theme.fontFamily }}>
-      {/* Heading */}
       <h1 className="text-3xl font-bold mb-2">Shop</h1>
       <p className="mb-6" style={{ color: theme.subTextColor }}>Buy exclusive items using your coins!</p>
 
-      {/* Shop Items Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 mb-8">
         {items.length === 0 && (
           <div className="col-span-full text-center py-12" style={{ color: theme.subTextColor }}>
@@ -131,7 +159,6 @@ export default function Shop() {
                 color: theme.textColor,
               }}
             >
-              {/* Image or Icon */}
               {item.image_url ? (
                 <img src={item.image_url} alt={item.name} className="w-16 h-16 object-cover rounded mb-2 border" style={{ borderColor: theme.cardBorderColor }} />
               ) : (
@@ -140,10 +167,8 @@ export default function Shop() {
                 </div>
               )}
 
-              {/* Item Name */}
               <h3 className="text-sm font-semibold mb-1">{item.name}</h3>
 
-              {/* Price Section */}
               <div className="flex flex-col items-center">
                 {item.offer ? (
                   <>
@@ -161,21 +186,18 @@ export default function Shop() {
                 )}
               </div>
 
-              {/* Offer Badge */}
               {item.offer && (
                 <div className="absolute top-2 left-2 text-white text-xs font-semibold px-2 py-1 rounded-full" style={{ background: theme.offerBadgeBackground || "linear-gradient(to right, #EC4899, #EF4444)" }}>
                   SALE
                 </div>
               )}
 
-              {/* Countdown */}
               {item.offer && timeLeft > 0 && (
                 <p className="text-xs font-bold mt-1" style={{ color: theme.offerTimer || "#F87171" }}>
                   Ends in: {formatTime(timeLeft)}
                 </p>
               )}
 
-              {/* Selected Indicator */}
               {active && (
                 <p className="text-xs font-semibold mt-1" style={{ color: theme.activeText }}>
                   Selected
@@ -186,7 +208,6 @@ export default function Shop() {
         })}
       </div>
 
-      {/* Pagination Controls */}
       {items.length > 0 && (
         <div className="mt-8 flex flex-col items-center gap-4">
           <div className="text-center">
@@ -194,22 +215,20 @@ export default function Shop() {
               Showing {items.length} of {totalItems} items
             </p>
           </div>
-          
           {hasMore && (
             <button
               onClick={loadNextPage}
               disabled={loading}
               className="px-6 py-2 rounded-lg font-medium transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
               style={{
-                backgroundColor: theme.primary || '#3B82F6',
-                color: theme.activeText || '#FFFFFF',
-                border: `1px solid ${theme.primary || '#3B82F6'}`
+                backgroundColor: theme.primary || "#3B82F6",
+                color: theme.activeText || "#FFFFFF",
+                border: `1px solid ${theme.primary || "#3B82F6"}`,
               }}
             >
-              {loading ? 'Loading...' : 'Load More Items'}
+              {loading ? "Loading..." : "Load More Items"}
             </button>
           )}
-          
           {!hasMore && items.length > 0 && (
             <p className="text-sm" style={{ color: theme.subTextColor }}>
               All items loaded
@@ -218,17 +237,58 @@ export default function Shop() {
         </div>
       )}
 
-      {/* Buy Button */}
+      {/* Buy button triggers payment modal */}
       <button
-        disabled={!selectedItem}
-        className={`w-full md:w-auto px-8 py-3 rounded-lg font-semibold transition-all duration-300 ${!selectedItem ? "cursor-not-allowed" : ""} mt-6`}
+        disabled={!selectedItem || purchasing}
+        onClick={handlePurchaseClick}
+        className={`w-full md:w-auto px-8 py-3 rounded-lg font-semibold transition-all duration-300 mt-6`}
         style={{
-          background: selectedItem ? theme.buttonColor : theme.disabledButton,
+          background: selectedItem && !purchasing ? theme.buttonColor : theme.disabledButton,
           color: theme.buttonTextColor,
+          cursor: selectedItem && !purchasing ? "pointer" : "not-allowed",
         }}
       >
-        {selectedItem ? "Purchase Item" : "Select an Item"}
+        {purchasing ? "Processing..." : selectedItem ? "Purchase Item" : "Select an Item"}
       </button>
+
+      {/* Payment Modal (same design as PurchaseOC) */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-80 text-center">
+            <h2 className="text-xl font-bold mb-4">Select Payment Method</h2>
+            <div className="flex flex-col gap-4">
+              {[{ id: "eneba", img: eneba }, { id: "rewarble", img: rewarble }].map((method) => (
+                <div
+                  key={method.id}
+                  onClick={() => setSelectedPayment(method.id)}
+                  className={`border rounded-lg p-2 cursor-pointer flex justify-center items-center ${
+                    selectedPayment === method.id ? "border-blue-500" : "border-gray-300"
+                  }`}
+                >
+                  <img src={method.img} alt={method.id} className="h-12" />
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={confirmPurchase}
+              disabled={!selectedPayment}
+              className={`mt-6 px-6 py-2 rounded-lg font-semibold w-full ${
+                selectedPayment
+                  ? "bg-blue-600 text-white cursor-pointer"
+                  : "bg-gray-400 text-gray-700 cursor-not-allowed"
+              }`}
+            >
+              Confirm Purchase
+            </button>
+            <button
+              onClick={() => setShowPaymentModal(false)}
+              className="mt-3 text-sm text-red-500 underline"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
