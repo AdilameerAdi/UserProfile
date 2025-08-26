@@ -4,10 +4,10 @@ import { useData } from "../context/DataContext";
 
 export default function Admin({ activeTab, setActiveTab }) {
   const { theme } = useContext(ThemeContext);
+  const [localLoading, setLocalLoading] = useState(false);
   const {
     store,
     loading,
-    error,
     loadAllData,
     loadDataForTab,
     uploadFile,
@@ -76,7 +76,6 @@ export default function Admin({ activeTab, setActiveTab }) {
     }
     
     if (result?.success) {
-      console.log('Character saved successfully');
       resetAll();
     } else {
       alert(`Failed to save character: ${result?.error || 'Unknown error'}`);
@@ -99,7 +98,6 @@ export default function Admin({ activeTab, setActiveTab }) {
     }
     
     if (result?.success) {
-      console.log('OC Package saved successfully');
       resetAll();
     } else {
       alert(`Failed to save OC Package: ${result?.error || 'Unknown error'}`);
@@ -128,7 +126,6 @@ export default function Admin({ activeTab, setActiveTab }) {
     }
     
     if (result?.success) {
-      console.log('Shop item saved successfully');
       resetAll();
     } else {
       alert(`Failed to save shop item: ${result?.error || 'Unknown error'}`);
@@ -147,7 +144,6 @@ export default function Admin({ activeTab, setActiveTab }) {
     }
     
     if (result?.success) {
-      console.log('Wheel reward saved successfully');
       resetAll();
     } else {
       alert(`Failed to save wheel reward: ${result?.error || 'Unknown error'}`);
@@ -199,8 +195,7 @@ export default function Admin({ activeTab, setActiveTab }) {
               className="mt-2 px-3 py-1 text-xs rounded"
               style={{ background: theme.buttonColor, color: theme.buttonTextColor }}
               onClick={() => {
-                setLoading(false);
-                console.log('Loading cancelled by user');
+                setLocalLoading(false);
               }}
             >
               Skip Loading

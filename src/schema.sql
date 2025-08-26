@@ -48,6 +48,192 @@ CREATE TRIGGER on_auth_user_created
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- ============================================================
+-- ADMIN CREDENTIALS TABLE
+-- ============================================================
+
+-- Create admin credentials table for secure admin login
+CREATE TABLE IF NOT EXISTS public.admin_credentials (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  username TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL, -- Store hashed password for security
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  last_login TIMESTAMPTZ
+);
+
+-- Disable RLS for admin table (handled by application logic)
+ALTER TABLE public.admin_credentials DISABLE ROW LEVEL SECURITY;
+
+-- Insert default admin credentials (password will be hashed)
+INSERT INTO public.admin_credentials (username, password_hash, is_active)
+VALUES ('Adil', 'Adil', TRUE) -- Note: In production, this should be properly hashed
+ON CONFLICT (username) DO NOTHING;
+
+-- Function to verify admin login
+CREATE OR REPLACE FUNCTION public.verify_admin_login(
+  input_username TEXT,
+  input_password TEXT
+)
+RETURNS JSON
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  admin_record RECORD;
+BEGIN
+  -- Find admin by username
+  SELECT id, username, password_hash, is_active, last_login
+  INTO admin_record
+  FROM public.admin_credentials
+  WHERE username = input_username AND is_active = TRUE
+  LIMIT 1;
+  
+  IF NOT FOUND THEN
+    RETURN json_build_object(
+      'success', false,
+      'error', 'Invalid username or password'
+    );
+  END IF;
+  
+  -- For now, do simple comparison (in production, use proper hashing)
+  -- TODO: Replace with proper password hashing verification
+  IF admin_record.password_hash != input_password THEN
+    RETURN json_build_object(
+      'success', false,
+      'error', 'Invalid username or password'
+    );
+  END IF;
+  
+  -- Update last login
+  UPDATE public.admin_credentials 
+  SET last_login = NOW(), updated_at = NOW()
+  WHERE id = admin_record.id;
+  
+  -- Return success with admin info
+  RETURN json_build_object(
+    'success', true,
+    'admin', json_build_object(
+      'id', admin_record.id,
+      'username', admin_record.username,
+      'last_login', admin_record.last_login
+    )
+  );
+END;
+$$;
+
+-- Function to update admin credentials
+CREATE OR REPLACE FUNCTION public.update_admin_credentials(
+  current_username TEXT,
+  current_password TEXT,
+  new_username TEXT DEFAULT NULL,
+  new_password TEXT DEFAULT NULL
+)
+RETURNS JSON
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  admin_record RECORD;
+  final_username TEXT;
+  final_password_hash TEXT;
+BEGIN
+  -- Verify current credentials first
+  SELECT id, username, password_hash, is_active
+  INTO admin_record
+  FROM public.admin_credentials
+  WHERE username = current_username AND is_active = TRUE
+  LIMIT 1;
+  
+  IF NOT FOUND THEN
+    RETURN json_build_object(
+      'success', false,
+      'error', 'Current credentials are invalid'
+    );
+  END IF;
+  
+  -- Verify current password
+  IF admin_record.password_hash != current_password THEN
+    RETURN json_build_object(
+      'success', false,
+      'error', 'Current password is incorrect'
+    );
+  END IF;
+  
+  -- Prepare new values
+  final_username := COALESCE(new_username, admin_record.username);
+  final_password_hash := COALESCE(new_password, admin_record.password_hash);
+  
+  -- Check if new username is already taken (if different)
+  IF final_username != admin_record.username THEN
+    IF EXISTS (SELECT 1 FROM public.admin_credentials WHERE username = final_username AND id != admin_record.id) THEN
+      RETURN json_build_object(
+        'success', false,
+        'error', 'Username is already taken'
+      );
+    END IF;
+  END IF;
+  
+  -- Update credentials
+  UPDATE public.admin_credentials
+  SET 
+    username = final_username,
+    password_hash = final_password_hash,
+    updated_at = NOW()
+  WHERE id = admin_record.id;
+  
+  RETURN json_build_object(
+    'success', true,
+    'message', 'Credentials updated successfully'
+  );
+END;
+$$;
+
+-- Function to get admin info by username
+CREATE OR REPLACE FUNCTION public.get_admin_info(input_username TEXT)
+RETURNS JSON
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  admin_record RECORD;
+BEGIN
+  SELECT id, username, is_active, created_at, last_login
+  INTO admin_record
+  FROM public.admin_credentials
+  WHERE username = input_username AND is_active = TRUE
+  LIMIT 1;
+  
+  IF NOT FOUND THEN
+    RETURN json_build_object(
+      'success', false,
+      'error', 'Admin not found'
+    );
+  END IF;
+  
+  RETURN json_build_object(
+    'success', true,
+    'admin', json_build_object(
+      'id', admin_record.id,
+      'username', admin_record.username,
+      'is_active', admin_record.is_active,
+      'created_at', admin_record.created_at,
+      'last_login', admin_record.last_login
+    )
+  );
+END;
+$$;
+
+-- Grant execute permissions
+GRANT EXECUTE ON FUNCTION public.verify_admin_login TO anon;
+GRANT EXECUTE ON FUNCTION public.verify_admin_login TO authenticated;
+GRANT EXECUTE ON FUNCTION public.update_admin_credentials TO anon;
+GRANT EXECUTE ON FUNCTION public.update_admin_credentials TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_admin_info TO anon;
+GRANT EXECUTE ON FUNCTION public.get_admin_info TO authenticated;
+
+-- ============================================================
 -- RECOVERY EMAIL FEATURE
 -- ============================================================
 

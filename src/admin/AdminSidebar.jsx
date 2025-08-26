@@ -1,9 +1,12 @@
 import { useState, useContext, useEffect } from "react";
 import { FaUserPlus, FaCoins, FaShoppingCart, FaGift, FaCreditCard, FaCog } from "react-icons/fa";
 import { ThemeContext } from "../context/ThemeContext";
+import { supabase } from "../supabaseClient";
+import { useAuth } from "../signup/AuthContext";
 
 export default function AdminSidebar({ activeTab, setActiveTab }) {
   const { theme } = useContext(ThemeContext);
+  const { currentUser } = useAuth();
   const [showSettings, setShowSettings] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -11,22 +14,22 @@ export default function AdminSidebar({ activeTab, setActiveTab }) {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // Load current admin credentials
+  // Load current admin credentials from current user
   useEffect(() => {
-    const savedCredentials = localStorage.getItem('adminCredentials');
-    if (savedCredentials) {
-      const { username: savedUsername } = JSON.parse(savedCredentials);
-      setUsername(savedUsername);
-    } else {
-      // Default credentials
-      setUsername("Adil");
+    if (currentUser && currentUser.role === "admin") {
+      setUsername(currentUser.name || "");
     }
-  }, []);
+  }, [currentUser]);
 
   const handleSaveSettings = async () => {
     // Validate inputs
     if (!username.trim()) {
       alert("Username cannot be empty");
+      return;
+    }
+
+    if (username.trim().length < 3) {
+      alert("Username must be at least 3 characters long");
       return;
     }
 
@@ -45,42 +48,54 @@ export default function AdminSidebar({ activeTab, setActiveTab }) {
       return;
     }
 
-    // Verify current password
-    const savedCredentials = localStorage.getItem('adminCredentials');
-    const currentCreds = savedCredentials 
-      ? JSON.parse(savedCredentials) 
-      : { username: "Adil", password: "Adil" };
-
-    if (currentPassword !== currentCreds.password) {
-      alert("Current password is incorrect");
-      return;
-    }
-
     setSaving(true);
 
     try {
-      // Save new credentials
-      const newCredentials = {
-        username: username.trim(),
-        password: password || currentCreds.password // Keep old password if new one not provided
-      };
+      // Use the database function to update admin credentials
+      const { data, error } = await supabase.rpc('update_admin_credentials', {
+        current_username: currentUser.name,
+        current_password: currentPassword,
+        new_username: username.trim() !== currentUser.name ? username.trim() : null,
+        new_password: password || null
+      });
 
-      localStorage.setItem('adminCredentials', JSON.stringify(newCredentials));
+      if (error) {
+        console.error('Database error updating admin credentials:', error);
+        alert(`Failed to save settings: ${error.message || 'Database error'}`);
+        return;
+      }
 
-      alert("Settings saved successfully! Please log in again with your new credentials.");
-      
-      // Reset form
-      setCurrentPassword("");
-      setPassword("");
-      setConfirmPassword("");
-      setShowSettings(false);
+      if (data?.success) {
+        const usernameChanged = username.trim() !== currentUser.name;
+        const passwordChanged = password && password.trim();
+        
+        let message = "Settings saved successfully!";
+        if (usernameChanged && passwordChanged) {
+          message = "Username and password updated successfully!";
+        } else if (usernameChanged) {
+          message = "Username updated successfully!";
+        } else if (passwordChanged) {
+          message = "Password updated successfully!";
+        }
+        
+        alert(message + " Please log in again with your new credentials.");
+        
+        // Reset form
+        setCurrentPassword("");
+        setPassword("");
+        setConfirmPassword("");
+        setShowSettings(false);
 
-      // Optionally log out the user to force re-login
-      setTimeout(() => {
-        window.location.href = "/login";
-      }, 1000);
+        // Force re-login by redirecting to login
+        setTimeout(() => {
+          window.location.href = "/login";
+        }, 1000);
+      } else {
+        alert(data?.error || "Failed to save settings");
+      }
 
     } catch (error) {
+      console.error('Error saving admin settings:', error);
       alert("Failed to save settings: " + error.message);
     } finally {
       setSaving(false);
@@ -192,11 +207,11 @@ export default function AdminSidebar({ activeTab, setActiveTab }) {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Username
+                  Username <span className="text-gray-500">(editable)</span>
                 </label>
                 <input 
                   type="text" 
-                  placeholder="Enter new username" 
+                  placeholder="Enter username" 
                   className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   value={username} 
                   onChange={(e) => setUsername(e.target.value)} 

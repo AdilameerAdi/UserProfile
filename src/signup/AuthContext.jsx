@@ -117,24 +117,40 @@ export function AuthProvider({ children }) {
 	const loginCredentials = async ({ emailOrName, password, isAdmin = false }) => {
 		
 		if (isAdmin) {
-			// Get admin credentials from localStorage or use defaults
-			const savedCredentials = localStorage.getItem('adminCredentials');
-			const adminCreds = savedCredentials 
-				? JSON.parse(savedCredentials) 
-				: { username: "Adil", password: "Adil" };
-
-
-			// Fallback admin login (legacy). Prefer using profile.is_admin for real admin accounts.
-			if (emailOrName === adminCreds.username && password === adminCreds.password) {
-				setAuthState({
-					isAuthenticated: true,
-					role: "admin",
-					currentUser: { id: "admin", name: adminCreds.username, email: "", role: "admin" },
-					isLoading: false,
+			// Use database admin authentication
+			try {
+				const { data, error } = await supabase.rpc('verify_admin_login', {
+					input_username: emailOrName,
+					input_password: password
 				});
-				return { ok: true };
+
+				if (error) {
+					console.error('Database error during admin login:', error);
+					return { ok: false, error: `Login failed: ${error.message}` };
+				}
+
+				if (data?.success) {
+					const adminInfo = data.admin;
+					setAuthState({
+						isAuthenticated: true,
+						role: "admin",
+						currentUser: { 
+							id: adminInfo.id, 
+							name: adminInfo.username, 
+							email: "", 
+							role: "admin",
+							lastLogin: adminInfo.last_login
+						},
+						isLoading: false,
+					});
+					return { ok: true };
+				} else {
+					return { ok: false, error: data?.error || 'Invalid admin credentials' };
+				}
+			} catch (error) {
+				console.error('Error during admin login:', error);
+				return { ok: false, error: 'Login failed. Please try again.' };
 			}
-			// Fall through to standard login if legacy creds not used
 		}
 
 		try {

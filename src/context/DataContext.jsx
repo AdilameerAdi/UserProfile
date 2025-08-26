@@ -13,7 +13,6 @@ const DataContext = createContext();
 export function DataProvider({ children }) {
   const [store, setStore] = useState(defaultData);
   const [loading, setLoading] = useState(false);
-  const [dataLoaded, setDataLoaded] = useState(false);
   const [error, setError] = useState(null);
   
   // Track which data has been loaded
@@ -25,9 +24,6 @@ export function DataProvider({ children }) {
   });
 
   // Don't load everything on mount - wait for specific requests
-  useEffect(() => {
-    setDataLoaded(true); // Mark as ready immediately
-  }, []);
 
   // Load specific table data
   const loadTableData = async (tableName) => {
@@ -40,13 +36,11 @@ export function DataProvider({ children }) {
     
     // Check if already loaded
     if (loadedTabs[tableName]) {
-      console.log(`${tableName} already loaded`);
       return;
     }
     
     try {
       setLoading(true);
-      console.log(`Loading ${tableName} from ${tableMap[tableName]}...`);
       
       // Create timeout for this specific query
       const timeoutPromise = new Promise((_, reject) => 
@@ -73,7 +67,6 @@ export function DataProvider({ children }) {
           ...prev,
           [tableName]: true
         }));
-        console.log(`✅ Loaded ${data?.length || 0} ${tableName} successfully`);
       }
     } catch (error) {
       console.error(`❌ Failed to load ${tableName}:`, error);
@@ -120,7 +113,6 @@ export function DataProvider({ children }) {
     try {
       setLoading(true);
       setError(null);
-      console.log('Loading all data from Supabase...');
       
       // Load all tables
       const [charactersRes, ocPackagesRes, shopItemsRes, wheelRewardsRes] = await Promise.all([
@@ -146,24 +138,12 @@ export function DataProvider({ children }) {
         wheelRewards: true
       });
       
-      console.log('Data loaded:', {
-        characters: results.characters.length,
-        ocPackages: results.ocPackages.length,
-        shopItems: results.shopItems.length,
-        wheelRewards: results.wheelRewards.length
-      });
-      
       // Set the store with results
       setStore(results);
-      setDataLoaded(true);
-      console.log('All data loaded successfully');
       
     } catch (error) {
       console.error('Error loading data:', error);
       setError(error.message || 'Failed to load data');
-      
-      // Set dataLoaded to true to prevent infinite retry loop
-      setDataLoaded(true);
       
       // Set empty store so UI shows "no data" messages
       setStore(defaultData);
