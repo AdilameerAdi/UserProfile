@@ -1,7 +1,7 @@
 import { useContext, useState } from "react";
 import { ThemeContext } from "../context/ThemeContext";
 import { FaTicketAlt, FaDonate, FaShoppingCart, FaSyncAlt } from "react-icons/fa";
-import backlog from "../img/level.png"
+import backlog from "../img/LEVEL.png"
 
 export default function Logs() {
   const { theme } = useContext(ThemeContext);
