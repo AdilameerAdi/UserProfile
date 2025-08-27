@@ -1,6 +1,7 @@
 import { useContext, useState } from "react";
 import { ThemeContext } from "../context/ThemeContext";
 import { FaTicketAlt, FaDonate, FaShoppingCart, FaSyncAlt } from "react-icons/fa";
+import backlog from "../img/level.png"
 
 export default function Logs() {
   const { theme } = useContext(ThemeContext);
@@ -17,11 +18,18 @@ export default function Logs() {
 
   return (
     <div
-      className="w-full max-w-6xl mx-auto flex flex-col gap-6 p-4"
-      style={{ color: theme.textColor, fontFamily: theme.fontFamily }}
+      className="w-full min-h-screen p-4 flex flex-col gap-6"
+      style={{
+        color: theme.textColor,
+        fontFamily: theme.fontFamily,
+        backgroundImage: `url(${backlog})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+      }}
     >
       {/* Page Title */}
-      <div>
+      <div className="max-w-6xl mx-auto">
         <h1 className="text-3xl font-bold mb-1">Logs</h1>
         <p className="text-sm opacity-80">
           View all coupons redeemed, donations made, and shop transactions!
@@ -29,16 +37,16 @@ export default function Logs() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-3 border-b pb-2" style={{ borderColor: theme.borderColor }}>
+      <div className="max-w-6xl mx-auto flex gap-3 border-b pb-2" style={{ borderColor: theme.borderColor }}>
         {tabs.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 bg-blue-500 rounded-md text-sm font-medium transition-all ${
               activeTab === tab.key ? "shadow-md" : "hover:opacity-80"
             }`}
             style={{
-              backgroundColor: activeTab === tab.key ? theme.activeBg : "transparent",
+              backgroundColor: activeTab === tab.key ? theme.activeBg : "#456D99",
               color: activeTab === tab.key ? theme.activeText : theme.textColor,
               border: `1px solid ${
                 activeTab === tab.key ? theme.activeBorder : theme.borderColor
@@ -53,7 +61,7 @@ export default function Logs() {
 
       {/* Table */}
       <div
-        className="rounded-lg shadow-md border overflow-hidden"
+        className="max-w-6xl mx-auto rounded-lg shadow-md border overflow-hidden"
         style={{
           backgroundColor: theme.cardBg || theme.bgColor,
           borderColor: theme.borderColor,

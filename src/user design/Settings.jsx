@@ -3,7 +3,9 @@ import { ThemeContext } from "../context/ThemeContext";
 import { useAuth } from "../signup/AuthContext";
 import { supabase } from "../supabaseClient";
 import ProfilePictureSelector from "../signup/ProfilePictureSelector";
-
+import dark from "../img/dark.png"
+import light from "../img/light.png"
+import purple from "../img/purple.png"
 export default function Settings() {
   const { theme, switchTheme, currentThemeName } = useContext(ThemeContext);
   const { currentUser: authUser, updateEmail, updatePassword, updateProfileName, updateProfilePicture } = useAuth();
@@ -561,37 +563,58 @@ export default function Settings() {
           </div>
         )}
 
-        {/* Appearance Tab */}
-        {activeTab === "appearance" && (
-          <div>
-            <h2 className="text-2xl sm:text-3xl font-bold mb-6">
-              Appearance Settings
-            </h2>
-            <p style={{ color: getBg("subText") }} className="mb-4">
-              Choose a theme for the whole application:
-            </p>
+      
+       {/* Appearance Tab */}
+{activeTab === "appearance" && (
+  <div
+    className="p-6 rounded-xl shadow-lg transition-colors duration-300"
+    style={{
+      backgroundImage:
+        currentThemeName === "dark"
+          ? `url(${dark})`
+          : currentThemeName === "light"
+          ? `url(${light})`
+          : currentThemeName === "purple"
+          ? `url(${purple})`
+          : "none",
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+      backgroundRepeat: "no-repeat",
+      minHeight: "500px", // ⬅️ makes it 3x taller (adjust as needed)
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "flex-start", // keeps text/buttons at top
+    }}
+  >
+    <h2 className="text-2xl sm:text-3xl font-bold mb-6">
+      Appearance Settings
+    </h2>
+    <p style={{ color: getBg("subText") }} className="mb-4">
+      Choose a theme for the whole application:
+    </p>
 
-            <div className="flex gap-4 flex-wrap">
-              {["light", "dark", "purple"].map((t) => (
-                <button
-                  key={t}
-                  onClick={() => switchTheme(t)}
-                  className="px-6 py-2 rounded-lg font-semibold transition-all duration-300 shadow-md"
-                  style={{
-                    backgroundColor: theme.primary,
-                    color: theme.buttonText,
-                    border:
-                      currentThemeName === t
-                        ? `3px solid ${theme.activeTabBg}`
-                        : `1px solid ${theme.borderColor}`,
-                  }}
-                >
-                  {t.charAt(0).toUpperCase() + t.slice(1)}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+    <div className="flex gap-4 flex-wrap">
+      {["light", "dark", "purple"].map((t) => (
+        <button
+          key={t}
+          onClick={() => switchTheme(t)}
+          className="px-6 py-2 rounded-lg font-semibold transition-all duration-300 shadow-md"
+          style={{
+            backgroundColor: theme.primary,
+            color: theme.buttonText,
+            border:
+              currentThemeName === t
+                ? `3px solid ${theme.activeTabBg}`
+                : `1px solid ${theme.borderColor}`,
+          }}
+        >
+          {t.charAt(0).toUpperCase() + t.slice(1)}
+        </button>
+      ))}
+    </div>
+  </div>
+)}
+
 
         {/* Security Tab */}
         {activeTab === "security" && (

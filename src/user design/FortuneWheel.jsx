@@ -101,15 +101,19 @@ export default function FortuneWheel() {
   }
 
   return (
-   <div
-    className="min-h-screen w-full flex flex-col items-center p-6"
+  <div className="min-h-screen w-full flex flex-col items-center p-6 relative">
+  {/* Background Overlay */}
+  <div
+    className="absolute inset-0"
     style={{
       backgroundImage: `url(${level})`,
       backgroundSize: "cover",
       backgroundPosition: "center",
       backgroundRepeat: "no-repeat",
+      opacity: 0.5,
+      zIndex: -1, // Send it behind content
     }}
-  >
+  ></div>
       <h1 className="text-3xl font-bold mb-2 text-white">Fortune Wheel</h1>
       <p className="mb-6 text-white">Spin the wheel to win amazing prizes!</p>
 
